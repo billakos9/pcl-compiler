@@ -1,0 +1,113 @@
+
+type token = 
+  | T_while
+  | T_var
+  | T_true
+  | T_times
+  | T_then
+  | T_string_const of 
+# 17 "lib/parser.mly"
+       (string)
+# 12 "lib/parser__mock.ml.mock"
+
+  | T_semicolon
+  | T_rparen
+  | T_return
+  | T_result
+  | T_real_const of 
+# 15 "lib/parser.mly"
+       (float)
+# 21 "lib/parser__mock.ml.mock"
+
+  | T_real
+  | T_rbracket
+  | T_program
+  | T_procedure
+  | T_plus
+  | T_or
+  | T_of
+  | T_not
+  | T_nil
+  | T_new
+  | T_ne
+  | T_mod
+  | T_minus
+  | T_lt
+  | T_lparen
+  | T_le
+  | T_lbracket
+  | T_label
+  | T_integer
+  | T_int_const of 
+# 14 "lib/parser.mly"
+       (int)
+# 45 "lib/parser__mock.ml.mock"
+
+  | T_if
+  | T_id of 
+# 13 "lib/parser.mly"
+       (string)
+# 51 "lib/parser__mock.ml.mock"
+
+  | T_gt
+  | T_goto
+  | T_ge
+  | T_function
+  | T_forward
+  | T_fdiv
+  | T_false
+  | T_eq
+  | T_eof
+  | T_end
+  | T_else
+  | T_dot
+  | T_do
+  | T_div
+  | T_dispose
+  | T_comma
+  | T_colon
+  | T_char_const of 
+# 16 "lib/parser.mly"
+       (char)
+# 73 "lib/parser__mock.ml.mock"
+
+  | T_char
+  | T_caret
+  | T_boolean
+  | T_begin
+  | T_at
+  | T_assign
+  | T_array
+  | T_and
+
+# 1 "lib/parser.mly"
+  
+  (* =========================================================
+     parser.mly  –  Menhir parser for PCL
+     Filled in during Phase 2.
+     ========================================================= *)
+
+# 91 "lib/parser__mock.ml.mock"
+
+let menhir_begin_marker =
+  0
+
+and xv_program =
+  let _ = fun (_startpos : Lexing.position) (_endpos : Lexing.position) (_endpos__0_ : Lexing.position) (_symbolstartpos : Lexing.position) (_startofs : int) (_endofs : int) (_endofs__0_ : int) (_symbolstartofs : int) (_sloc : Lexing.position * Lexing.position) (_loc : Lexing.position * Lexing.position) (
+# 29 "lib/parser.mly"
+   _1
+# 100 "lib/parser__mock.ml.mock"
+   : unit) (_startpos__1_ : Lexing.position) (_endpos__1_ : Lexing.position) (_startofs__1_ : int) (_endofs__1_ : int) (_loc__1_ : Lexing.position * Lexing.position) : (
+# 24 "lib/parser.mly"
+       (Ast.program)
+# 104 "lib/parser__mock.ml.mock"
+  ) ->
+    (
+# 29 "lib/parser.mly"
+          ( () )
+# 109 "lib/parser__mock.ml.mock"
+     : 'tv_program) in
+  ((let rec diverge() = diverge() in diverge()) : 'tv_program)
+
+and menhir_end_marker =
+  0

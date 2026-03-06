@@ -1,0 +1,71 @@
+
+(* The type of tokens. *)
+
+type token = 
+  | T_while
+  | T_var
+  | T_true
+  | T_times
+  | T_then
+  | T_string_const of (string)
+  | T_semicolon
+  | T_rparen
+  | T_return
+  | T_result
+  | T_real_const of (float)
+  | T_real
+  | T_rbracket
+  | T_program
+  | T_procedure
+  | T_plus
+  | T_or
+  | T_of
+  | T_not
+  | T_nil
+  | T_new
+  | T_ne
+  | T_mod
+  | T_minus
+  | T_lt
+  | T_lparen
+  | T_le
+  | T_lbracket
+  | T_label
+  | T_integer
+  | T_int_const of (int)
+  | T_if
+  | T_id of (string)
+  | T_gt
+  | T_goto
+  | T_ge
+  | T_function
+  | T_forward
+  | T_fdiv
+  | T_false
+  | T_eq
+  | T_eof
+  | T_end
+  | T_else
+  | T_dot
+  | T_do
+  | T_div
+  | T_dispose
+  | T_comma
+  | T_colon
+  | T_char_const of (char)
+  | T_char
+  | T_caret
+  | T_boolean
+  | T_begin
+  | T_at
+  | T_assign
+  | T_array
+  | T_and
+
+(* This exception is raised by the monolithic API functions. *)
+
+exception Error
+
+(* The monolithic API. *)
+
+val program: (Lexing.lexbuf -> token) -> Lexing.lexbuf -> (unit)

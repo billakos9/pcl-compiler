@@ -1,0 +1,17 @@
+# dune exec ./bin/main.exe -- test.pcl
+# OCAMLPARAM: unset
+# Shared cache: enabled-except-user-rules
+# Shared cache location: /Users/vafentoulidis/.cache/dune/db
+# Workspace root: "/Users/vafentoulidis/ECE/FLOW
+# L/\206\156\206\181\207\132\206\177\206\179\206\187\207\137\207\132\207\132\206\185\207\131\207\132\206\181\204\129\207\130/Ocaml-testing/pcl-compiler"
+# Auto-detected concurrency: 8
+# Dune context:
+#  { name = "default"
+#  ; kind = "default"
+#  ; profile = Dev
+#  ; merlin = true
+#  ; fdo_target_exe = None
+#  ; build_dir = In_build_dir "default"
+#  ; instrument_with = []
+#  }
+$ /Users/vafentoulidis/.opam/compilers-ntua/bin/ocamlc.opt -config > /var/folders/v7/0mm4n62d111124250t0ytc1m0000gn/T/dune_094bab_output

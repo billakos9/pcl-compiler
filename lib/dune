@@ -1,0 +1,9 @@
+(library
+ (name pcl_compiler)
+ (modules tokens lexer ast parser symbol semantic codegen))
+
+; Phase 1 – Lexer
+(ocamllex lexer)
+
+; Phase 2 – Parser (menhir)
+(menhir (modules parser) (flags (--explain --unused-tokens)))
