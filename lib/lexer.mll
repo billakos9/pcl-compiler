@@ -1,12 +1,13 @@
 {
   open Tokens
 
+  (* exception for strings not understood (ie. @#$) *)
   exception LexicalError of string
 
   (* Buffer for building string literals *)
   let string_buf = Buffer.create 64
 
-  (* Decode a PCL escape sequence character *)
+  (* function that inputs c and returns the correct character *)
   let decode_escape c = match c with
     | 'n'  -> '\n'
     | 't'  -> '\t'
