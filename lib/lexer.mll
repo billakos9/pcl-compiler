@@ -8,14 +8,16 @@
   let string_buf = Buffer.create 64
 
   (* function that inputs c and returns the correct character *)
+  (* escape sequences *)
   let decode_escape c = match c with
     | 'n'  -> '\n'
     | 't'  -> '\t'
     | 'r'  -> '\r'
-    | '0'  -> '\000'
-    | '\\' -> '\\'
-    | '\'' -> '\''
-    | '"'  -> '"'
+    | '0'  -> '\000' (* Ocaml null = \000 (octal) or \x00 (hex) *)
+    | '\\' -> '\\'  (* stays the same: \ char = \\  in Ocaml *)
+    | '\'' -> '\''  (* stays the same: ' char = \' in Ocaml *)
+    | '"'  -> '"'   (* pcl source = \" but in Ocaml is '"' no backspace needed *)
+    (* _ = else *)
     | _    -> raise (LexicalError (Printf.sprintf "Unknown escape sequence: \\%c" c))
 }
 
