@@ -7,9 +7,14 @@
   (* Buffer for building string literals *)
   let string_buf = Buffer.create 64
 
+  (* returns "line X, col Y" for the current lexbuf position *)
+  let lexer_pos lexbuf =
+    let pos = Lexing.lexeme_start_p lexbuf in
+    Printf.sprintf "line %d, col %d" pos.pos_lnum (pos.pos_cnum - pos.pos_bol)
+
   (* function that inputs c and returns the correct character *)
   (* escape sequences *)
-  let decode_escape c = match c with
+  let decode_escape lexbuf c = match c with
     | 'n'  -> '\n'
     | 't'  -> '\t'
     | 'r'  -> '\r'
@@ -18,7 +23,7 @@
     | '\'' -> '\''  (* stays the same: ' char = \' in Ocaml *)
     | '"'  -> '"'   (* pcl source = \" but in Ocaml is '"' no backspace needed *)
     (* _ = else *)
-    | _    -> raise (LexicalError (Printf.sprintf "Unknown escape sequence: \\%c" c))
+    | _    -> raise (LexicalError (lexer_pos lexbuf ^ Printf.sprintf ": Unknown escape sequence: \\%c" c))
 }
 
 (* ── Named character classes ─────────────────────────────────────── *)
@@ -92,7 +97,7 @@ rule token = parse
   | '\'' (common_char as c) '\''
       { T_char_const c }
   | '\'' '\\' (['n' 't' 'r' '0' '\\' '\'' '"'] as c) '\''
-      { T_char_const (decode_escape c) }
+      { T_char_const (decode_escape lexbuf c) }
 
   (* ── String literals  "..." ── *)
   | '"'
@@ -136,7 +141,7 @@ rule token = parse
 (* ── Block-comment consumer ─────────────────────────────────────── *)
 and comment = parse
   | "*)"  { token lexbuf }
-  | eof   { raise (LexicalError "Unterminated comment") }
+  | eof   { raise (LexicalError (lexer_pos lexbuf ^ ": Unterminated comment")) }
   | _     { comment lexbuf }
 
 (* ── String-literal consumer ────────────────────────────────────── *)
@@ -144,15 +149,14 @@ and string_lit = parse
   | '"'
       { T_string_const (Buffer.contents string_buf) }
   | '\\' (['n' 't' 'r' '0' '\\' '\'' '"'] as c)
-      { Buffer.add_char string_buf (decode_escape c);
+      { Buffer.add_char string_buf (decode_escape lexbuf c);
         string_lit lexbuf }
   | '\n'
-      { raise (LexicalError "Unterminated string literal (newline inside string)") }
+      { raise (LexicalError (lexer_pos lexbuf ^ ": Unterminated string literal (newline inside string)")) }
   | eof
-      { raise (LexicalError "Unterminated string literal") }
+      { raise (LexicalError (lexer_pos lexbuf ^ ": Unterminated string literal")) }
   | common_char+ as s
       { Buffer.add_string string_buf s;
         string_lit lexbuf }
   | _ as c
-      { raise (LexicalError
-          (Printf.sprintf "Invalid character in string: '%c'" c)) }
+      { raise (LexicalError (lexer_pos lexbuf ^ Printf.sprintf ": Invalid character in string: '%c'" c)) }
