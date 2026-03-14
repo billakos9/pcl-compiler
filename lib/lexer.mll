@@ -7,7 +7,17 @@
   (* Buffer for building string literals *)
   let string_buf = Buffer.create 64
 
-  (* returns "line X, col Y" for the current lexbuf position *)
+  (*    lexer_pos returns "line X, col Y" for the current lexbuf position
+        
+        lexeme_start_p returns a Lexing.position record for the start of
+        the current lexeme; 
+        
+        pos_lnum is the current line number (1-based),
+        
+        pos_cnum is the absolute character offset from the start of the input
+        
+        pos_bol is the offset of the beginning of the current line
+    *)
   let lexer_pos lexbuf =
     let pos = Lexing.lexeme_start_p lexbuf in
     Printf.sprintf "line %d, col %d" pos.pos_lnum (pos.pos_cnum - pos.pos_bol)
