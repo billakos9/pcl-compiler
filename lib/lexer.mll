@@ -46,10 +46,11 @@ let whitespace = [' ' '\t' '\r' '\n']   (* Empty characters (space , tab, move t
 
 (* ── Numeric patterns ─────────────────────────────────────────────── *)
 let integer    = digit+
+(* ? = the previous block is either 0 or 1 (optional)*)
 let real       = digit+ '.' digit+ (['e' 'E'] ['+' '-']? digit+)?
 
-(* ── Printable characters allowed inside char/string literals ──────
-   Any printable ASCII except single-quote, double-quote and backslash *)
+(* ── Printable characters allowed inside char/string literals
+  Any printable ASCII ( except = ^ ) single-quote, double-quote and backslash *)
 let common_char = [^ '\'' '"' '\\' '\x00'-'\x1f' '\x7f']
 
 (* ── Main tokenizer ──────────────────────────────────────────────── *)
