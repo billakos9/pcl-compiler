@@ -56,8 +56,9 @@
 %nonassoc T_eq T_ne T_lt T_gt T_le T_ge
 %left     T_plus T_minus
 %left     T_times T_fdiv T_div T_mod
-%nonassoc UNARY               (* unary +, - *)
-%nonassoc T_caret             (* p^ dereference — highest *)
+%nonassoc UNARY T_at          (* unary +, -, @x address-of *)
+%nonassoc T_lbracket          (* a[i] array indexing        *)
+%nonassoc T_caret             (* p^   dereference — highest *)
 
 %%
 
@@ -144,7 +145,7 @@ stmt_list:
 
 stmt:
   (* empty *)                                         { () }  (* allowed: begin end or begin ; end  *)
-| lvalue T_assign expr                                { () }  (* x := 5                            *)
+| expr T_assign expr                                  { () }  (* x := 5                            *)
 | block                                               { () }  (* nested begin/end                  *)
 | call                                                { () }  (* foo(x, y)                         *)
 | T_if expr T_then stmt                               { () }  (* if x then ...                     *)
@@ -153,53 +154,47 @@ stmt:
 | T_id T_colon stmt                                   { () }  (* myLabel: stmt  (label definition) *)
 | T_goto T_id                                         { () }  (* goto myLabel                      *)
 | T_return                                            { () }  (* return from function/procedure    *)
-| T_new lvalue                                        { () }  (* new p        (pointer alloc)      *)
-| T_new T_lbracket expr T_rbracket lvalue             { () }  (* new [n] arr  (array alloc)        *)
-| T_dispose lvalue                                    { () }  (* dispose p    (pointer free)       *)
-| T_dispose T_lbracket T_rbracket lvalue              { () }  (* dispose [] arr (array free)       *)
+| T_new expr                                          { () }  (* new p        (pointer alloc)      *)
+| T_new T_lbracket expr T_rbracket expr               { () }  (* new [n] arr  (array alloc)        *)
+| T_dispose expr                                      { () }  (* dispose p    (pointer free)       *)
+| T_dispose T_lbracket T_rbracket expr                { () }  (* dispose [] arr (array free)       *)
 
 (* ═══════════════════════════════════════════════════════════
    EXPRESSIONS
    ═══════════════════════════════════════════════════════════ *)
 
 expr:
-  lvalue  { () }  |   rvalue  { () }
-
-lvalue:
-  T_id                                { () }  (* x                   *)
-| T_result                            { () }  (* result (in function) *)
-| T_string_const                      { () }  (* "hello"              *)
-| lvalue T_lbracket expr T_rbracket   { () }  (* a[i]                *)
-| expr T_caret                        { () }  (* p^  (dereference)   *)
-| T_lparen lvalue T_rparen            { () }  (* (x)                 *)
-
-rvalue:
-  T_int_const                { () }  (* 42                *)
-| T_real_const               { () }  (* 3.14              *)
-| T_char_const               { () }  (* 'a'               *)
-| T_true                     { () }  (* true              *)
-| T_false                    { () }  (* false             *)
-| T_nil                      { () }  (* nil               *)
-| T_lparen rvalue T_rparen   { () }  (* (r-value)         *)
-| call                       { () }  (* foo(x, y)         *)
-| T_at lvalue                { () }  (* @x  (address-of)  *)
-| T_not expr                 %prec T_not   { () }  (* not x             *)
-| T_plus expr                %prec UNARY   { () }  (* +x  (unary plus)  *)
-| T_minus expr               %prec UNARY   { () }  (* -x  (unary minus) *)
-| expr T_plus expr           { () }  (* x + y             *)
-| expr T_minus expr          { () }  (* x - y             *)
-| expr T_times expr          { () }  (* x * y             *)
-| expr T_fdiv expr           { () }  (* x / y             *)
-| expr T_div expr            { () }  (* x div y           *)
-| expr T_mod expr            { () }  (* x mod y           *)
-| expr T_or expr             { () }  (* x or y            *)
-| expr T_and expr            { () }  (* x and y           *)
-| expr T_eq expr             { () }  (* x = y             *)
-| expr T_ne expr             { () }  (* x <> y            *)
-| expr T_lt expr             { () }  (* x < y             *)
-| expr T_gt expr             { () }  (* x > y             *)
-| expr T_le expr             { () }  (* x <= y            *)
-| expr T_ge expr             { () }  (* x >= y            *)
+  T_id                              { () }  (* x                    *)
+| T_result                          { () }  (* result (in function) *)
+| T_string_const                    { () }  (* "hello"              *)
+| T_int_const                       { () }  (* 42                   *)
+| T_real_const                      { () }  (* 3.14                 *)
+| T_char_const                      { () }  (* 'a'                  *)
+| T_true                            { () }  (* true                 *)
+| T_false                           { () }  (* false                *)
+| T_nil                             { () }  (* nil                  *)
+| call                              { () }  (* foo(x, y)            *)
+| T_lparen expr T_rparen            { () }  (* (expr)               *)
+| T_at expr          %prec T_at     { () }  (* @x  (address-of)     *)
+| expr T_caret                      { () }  (* p^  (dereference)    *)
+| expr T_lbracket expr T_rbracket   { () }  (* a[i]                 *)
+| T_not   expr       %prec T_not    { () }  (* not x                *)
+| T_plus  expr       %prec UNARY    { () }  (* +x  (unary plus)     *)
+| T_minus expr       %prec UNARY    { () }  (* -x  (unary minus)    *)
+| expr T_plus   expr                { () }  (* x + y                *)
+| expr T_minus  expr                { () }  (* x - y                *)
+| expr T_times  expr                { () }  (* x * y                *)
+| expr T_fdiv   expr                { () }  (* x / y                *)
+| expr T_div    expr                { () }  (* x div y              *)
+| expr T_mod    expr                { () }  (* x mod y              *)
+| expr T_or     expr                { () }  (* x or y               *)
+| expr T_and    expr                { () }  (* x and y              *)
+| expr T_eq     expr                { () }  (* x = y                *)
+| expr T_ne     expr                { () }  (* x <> y               *)
+| expr T_lt     expr                { () }  (* x < y                *)
+| expr T_gt     expr                { () }  (* x > y                *)
+| expr T_le     expr                { () }  (* x <= y               *)
+| expr T_ge     expr                { () }  (* x >= y               *)
 
 (* function/procedure call: foo(x, y, z) or foo() *)
 call:

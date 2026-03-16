@@ -64,9 +64,7 @@ val xv_var_decl : unit
 val xv_typ : unit
 val xv_stmt_list : unit
 val xv_stmt : unit
-val xv_rvalue : unit
 val xv_program : unit
-val xv_lvalue : unit
 val xv_locals : unit
 val xv_local : unit
 val xv_id_list : unit
