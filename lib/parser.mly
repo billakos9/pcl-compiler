@@ -120,6 +120,31 @@ typ:
    STATEMENTS
    ═══════════════════════════════════════════════════════════ *)
 
+(* begin stmt ; stmt ; ... end *)
+block:
+  T_begin stmt_list T_end  { () }
+
+(* one or more stmts separated by ";" — ";" is a separator not a terminator *)
+stmt_list:
+  stmt                        { () }
+| stmt_list T_semicolon stmt  { () }
+
+stmt:
+  (* empty *)                                         { () }  (* allowed: begin end or begin ; end  *)
+| lvalue T_assign expr                                { () }  (* x := 5                            *)
+| block                                               { () }  (* nested begin/end                  *)
+| call                                                { () }  (* foo(x, y)                         *)
+| T_if expr T_then stmt                               { () }  (* if x then ...                     *)
+| T_if expr T_then stmt T_else stmt                   { () }  (* if x then ... else ...            *)
+| T_while expr T_do stmt                              { () }  (* while x do ...                    *)
+| T_id T_colon stmt                                   { () }  (* myLabel: stmt  (label definition) *)
+| T_goto T_id                                         { () }  (* goto myLabel                      *)
+| T_return                                            { () }  (* return from function/procedure    *)
+| T_new lvalue                                        { () }  (* new p        (pointer alloc)      *)
+| T_new T_lbracket expr T_rbracket lvalue             { () }  (* new [n] arr  (array alloc)        *)
+| T_dispose lvalue                                    { () }  (* dispose p    (pointer free)       *)
+| T_dispose T_lbracket T_rbracket lvalue              { () }  (* dispose [] arr (array free)       *)
+
 (* ═══════════════════════════════════════════════════════════
    EXPRESSIONS
    ═══════════════════════════════════════════════════════════ *)
