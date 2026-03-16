@@ -48,39 +48,78 @@
 %start <unit> program
 %%
 
+(* ═══════════════════════════════════════════════════════════
+   PROGRAM STRUCTURE
+   ═══════════════════════════════════════════════════════════ *)
+
 program:
   T_program T_id T_semicolon body T_dot T_eof { () }
 
+(* body = zero or more locals, then a block *)
 body:
   locals block { () }
 
+(* zero or more local declarations *)
 locals:
   (* empty *)    { () }
 | locals local   { () }
 
-(* ⟨local⟩ — τι μπορεί να υπάρχει πριν το begin/end block:
-   - var δηλώσεις μεταβλητών
-   - label δηλώσεις ετικετών
-   - ορισμός procedure/function (header + body)
-   - forward δήλωση (ότι αυτό ορίζεται αργότερα) *)
+(* a single local declaration *)
 local:
-  T_var var_decl_list                   { () }
-| T_label id_list T_semicolon           { () }
-| header T_semicolon body T_semicolon   { () }
-| T_forward header T_semicolon          { () }
+  T_var var_decl_list                   { () }  (* var x, y : integer; ...        *)
+| T_label id_list T_semicolon           { () }  (* label foo, bar;                *)
+| header T_semicolon body T_semicolon   { () }  (* procedure/function definition  *)
+| T_forward header T_semicolon          { () }  (* forward declaration            *)
 
-(* Ένα ή περισσότερα var declarations:
-   var x, y : integer;
-       a    : boolean;   ← δύο var_decl *)
+(* ═══════════════════════════════════════════════════════════
+   DECLARATIONS
+   ═══════════════════════════════════════════════════════════ *)
+
+(* one or more var declaration lines: x, y : integer;  a : boolean; *)
 var_decl_list:
   var_decl                 { () }
 | var_decl_list var_decl   { () }
 
-(* Μια γραμμή δήλωσης: x, y, z : integer; *)
+(* one declaration line: x, y, z : integer; *)
 var_decl:
   id_list T_colon typ T_semicolon  { () }
 
-(* Λίστα από ονόματα χωρισμένα με κόμμα: x, y, z *)
+(* comma-separated names: x, y, z *)
 id_list:
-  T_id                 { () }
-| id_list T_comma T_id { () }
+  T_id                   { () }
+| id_list T_comma T_id   { () }
+
+(* procedure or function header (without body) *)
+header:
+  T_procedure T_id T_lparen formal_list T_rparen             { () }
+| T_function  T_id T_lparen formal_list T_rparen T_colon typ { () }
+
+(* zero or more formal parameter groups separated by ";" *)
+formal_list:
+  (* empty *)                    { () }
+| formal                         { () }
+| formal_list T_semicolon formal { () }
+
+(* one parameter group: [var] x, y : integer
+   "var" = call-by-reference, without = call-by-value *)
+formal:
+  T_var id_list T_colon typ { () }
+| id_list T_colon typ       { () }
+
+(* variable type *)
+typ:
+  T_integer                                           { () }  (* integer            *)
+| T_real                                              { () }  (* real               *)
+| T_boolean                                           { () }  (* boolean            *)
+| T_char                                              { () }  (* char               *)
+| T_array T_lbracket T_int_const T_rbracket T_of typ  { () }  (* array [10] of int  *)
+| T_array T_lbracket T_rbracket T_of typ              { () }  (* array [] of int    *)
+| T_caret typ                                         { () }  (* ^integer (pointer) *)
+
+(* ═══════════════════════════════════════════════════════════
+   STATEMENTS
+   ═══════════════════════════════════════════════════════════ *)
+
+(* ═══════════════════════════════════════════════════════════
+   EXPRESSIONS
+   ═══════════════════════════════════════════════════════════ *)
