@@ -148,3 +148,52 @@ stmt:
 (* ═══════════════════════════════════════════════════════════
    EXPRESSIONS
    ═══════════════════════════════════════════════════════════ *)
+
+expr:
+  lvalue  { () }  |   rvalue  { () }
+
+lvalue:
+  T_id                                { () }  (* x                   *)
+| T_result                            { () }  (* result (in function) *)
+| T_string_const                      { () }  (* "hello"              *)
+| lvalue T_lbracket expr T_rbracket   { () }  (* a[i]                *)
+| expr T_caret                        { () }  (* p^  (dereference)   *)
+| T_lparen lvalue T_rparen            { () }  (* (x)                 *)
+
+rvalue:
+  T_int_const                { () }  (* 42                *)
+| T_real_const               { () }  (* 3.14              *)
+| T_char_const               { () }  (* 'a'               *)
+| T_true                     { () }  (* true              *)
+| T_false                    { () }  (* false             *)
+| T_nil                      { () }  (* nil               *)
+| T_lparen rvalue T_rparen   { () }  (* (r-value)         *)
+| call                       { () }  (* foo(x, y)         *)
+| T_at lvalue                { () }  (* @x  (address-of)  *)
+| T_not expr                 { () }  (* not x             *)
+| T_plus expr                { () }  (* +x  (unary plus)  *)
+| T_minus expr               { () }  (* -x  (unary minus) *)
+| expr T_plus expr           { () }  (* x + y             *)
+| expr T_minus expr          { () }  (* x - y             *)
+| expr T_times expr          { () }  (* x * y             *)
+| expr T_fdiv expr           { () }  (* x / y             *)
+| expr T_div expr            { () }  (* x div y           *)
+| expr T_mod expr            { () }  (* x mod y           *)
+| expr T_or expr             { () }  (* x or y            *)
+| expr T_and expr            { () }  (* x and y           *)
+| expr T_eq expr             { () }  (* x = y             *)
+| expr T_ne expr             { () }  (* x <> y            *)
+| expr T_lt expr             { () }  (* x < y             *)
+| expr T_gt expr             { () }  (* x > y             *)
+| expr T_le expr             { () }  (* x <= y            *)
+| expr T_ge expr             { () }  (* x >= y            *)
+
+(* function/procedure call: foo(x, y, z) or foo() *)
+call:
+  T_id T_lparen expr_list T_rparen  { () }
+
+(* zero or more comma-separated expressions *)
+expr_list:
+  (* empty *)              { () }
+| expr                     { () }
+| expr_list T_comma expr   { () }
