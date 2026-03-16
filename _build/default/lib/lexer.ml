@@ -1,6 +1,6 @@
 # 2 "lib/lexer.mll"
  
-  open Tokens
+  open Parser
 
   (* exception for strings not understood (ie. @#$) *)
   exception LexicalError of string

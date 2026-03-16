@@ -1,4 +1,4 @@
-open Pcl_compiler.Tokens
+open Pcl_compiler.Parser
 open Pcl_compiler.Lexer
 
 (* ── Pretty-print a token (used for --dump-tokens debug mode) ──── *)
@@ -76,10 +76,16 @@ let run_lexer lexbuf =
     Printf.eprintf "Lexical error: %s\n" msg;
     exit 1
 
-(* ── Phase 2: Parse – TODO ──────────────────────────────────────── *)
-(* let run_parser lexbuf =
-     let _ast = Parser.program Lexer.token lexbuf in
-     ast *)
+(* ── Phase 2: Parse ─────────────────────────────────────────────── *)
+let run_parser lexbuf =
+  try
+    Pcl_compiler.Parser.program Pcl_compiler.Lexer.token lexbuf;
+    Printf.printf "Parsing OK\n"
+  with
+  | Pcl_compiler.Lexer.LexicalError msg ->
+      Printf.eprintf "Lexical error: %s\n" msg; exit 1
+  | _e ->
+      Printf.eprintf "Syntax error\n"; exit 1
 
 (* ── Phase 3: Semantic analysis – TODO ─────────────────────────── *)
 (* let run_semantic _ast = () *)
@@ -96,4 +102,8 @@ let () =
   let ic = open_in filename in
   let lexbuf = Lexing.from_channel ic in
   run_lexer lexbuf;
-  close_in ic
+  let ic2 = open_in filename in
+  let lexbuf2 = Lexing.from_channel ic2 in
+  run_parser lexbuf2;
+  close_in ic;
+  close_in ic2

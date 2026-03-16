@@ -48,7 +48,7 @@
 %start <unit> program
 
 (* ── Operator precedence (lowest to highest) ── *)
-%nonassoc T_then              (* dangling else: shift "else" over "then" *)
+%nonassoc T_then              (* dangling else: shift "else" over closer "then" *)
 %nonassoc T_else
 %left     T_or
 %left     T_and

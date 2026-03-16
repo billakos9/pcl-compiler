@@ -1,1 +1,1 @@
-lib/lexer.ml: Buffer Char Lexing Printf Tokens
+lib/lexer.ml: Buffer Char Lexing Parser Printf
