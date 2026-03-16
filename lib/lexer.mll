@@ -1,3 +1,4 @@
+(* Header Block *)
 {
   open Tokens
 
@@ -7,7 +8,7 @@
   (* Buffer for building string literals *)
   let string_buf = Buffer.create 64
 
-  (*    lexer_pos returns "line X, col Y" for the current lexbuf position
+  (*    lexer_pos returns "line X, col Y" for the current lexbuf position.
         
         lexeme_start_p returns a Lexing.position record for the start of
         the current lexeme; 
@@ -18,6 +19,7 @@
         
         pos_bol is the offset of the beginning of the current line
     *)
+
   let lexer_pos lexbuf =
     let pos = Lexing.lexeme_start_p lexbuf in
     Printf.sprintf "line %d, col %d" pos.pos_lnum (pos.pos_cnum - pos.pos_bol)
@@ -39,8 +41,8 @@
 (* ── Named character classes ─────────────────────────────────────── *)
 let letter     = ['a'-'z' 'A'-'Z']
 let digit      = ['0'-'9']
-let id_char    = letter | digit | '_'
-let whitespace = [' ' '\t' '\r' '\n']
+let id_char    = letter | digit | '_'   (* Characters allowed inside an identifier *)
+let whitespace = [' ' '\t' '\r' '\n']   (* Empty characters (space , tab, move to start of the line, newline) *)
 
 (* ── Numeric patterns ─────────────────────────────────────────────── *)
 let integer    = digit+
