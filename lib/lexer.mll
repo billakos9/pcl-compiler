@@ -54,16 +54,15 @@ let real       = digit+ '.' digit+ (['e' 'E'] ['+' '-']? digit+)?
 let common_char = [^ '\'' '"' '\\' '\x00'-'\x1f' '\x7f']
 
 (* ── Main tokenizer ──────────────────────────────────────────────── *)
+(*  First pattern wins in Ocamllex (ie. begine is T_begin and note T_id "begin") *)
 rule token = parse
   (* Whitespace – skip silently *)
-  | whitespace+   { token lexbuf }
+  | whitespace+   { token lexbuf }    (* Recursive call of the function *)
 
   (* Block comments  (* ... *)  – not nested *)
-  | "(*"          { comment lexbuf }
+  | "(*"          { comment lexbuf }  (* Jump to comment function *)
 
-  (* ── Keywords (must come before the identifier rule so that the
-       longest-match / first-rule tie-break picks the keyword when the
-       input is exactly the keyword word) ── *)
+  (* Keywords *)
   | "and"         { T_and }
   | "array"       { T_array }
   | "begin"       { T_begin }
@@ -98,23 +97,25 @@ rule token = parse
   | "while"       { T_while }
 
   (* ── Identifiers ── *)
-  | letter id_char*  { T_id (Lexing.lexeme lexbuf) }
+  (* id_char starts with a letter *)
+  | letter id_char*  { T_id (Lexing.lexeme lexbuf) } (* returns the string just read from lexer *)
 
   (* ── Real literals (must come before integer so "42.0" isn't split) ── *)
-  | real             { T_real_const (float_of_string (Lexing.lexeme lexbuf)) }
+  | real             { T_real_const (float_of_string (Lexing.lexeme lexbuf)) }    (* conversion to real *)
 
   (* ── Integer literals ── *)
-  | integer          { T_int_const (int_of_string (Lexing.lexeme lexbuf)) }
+  | integer          { T_int_const (int_of_string (Lexing.lexeme lexbuf)) }   (* conversion to string *)
 
   (* ── Character literals  'x'  or  '\n' ── *)
   | '\'' (common_char as c) '\''
       { T_char_const c }
+  (* escape char literal *)
   | '\'' '\\' (['n' 't' 'r' '0' '\\' '\'' '"'] as c) '\''
       { T_char_const (decode_escape lexbuf c) }
 
   (* ── String literals  "..." ── *)
   | '"'
-      { Buffer.clear string_buf;
+      { Buffer.clear string_buf;    (* clean buffer from previous reads *)
         string_lit lexbuf }
 
   (* ── Two-character operators (must come before single-char ones) ── *)
@@ -157,19 +158,25 @@ and comment = parse
   | eof   { raise (LexicalError (lexer_pos lexbuf ^ ": Unterminated comment")) }
   | _     { comment lexbuf }
 
+(* cont. of token rule *)
 (* ── String-literal consumer ────────────────────────────────────── *)
 and string_lit = parse
+  (* string ended *)
   | '"'
       { T_string_const (Buffer.contents string_buf) }
+  (* decode escape and add to buffer *)
   | '\\' (['n' 't' 'r' '0' '\\' '\'' '"'] as c)
       { Buffer.add_char string_buf (decode_escape lexbuf c);
         string_lit lexbuf }
+  (* error if string never ended with '"' *)
   | '\n'
       { raise (LexicalError (lexer_pos lexbuf ^ ": Unterminated string literal (newline inside string)")) }
   | eof
       { raise (LexicalError (lexer_pos lexbuf ^ ": Unterminated string literal")) }
+  (* many chars together -> add them (better efficiency) *)
   | common_char+ as s
       { Buffer.add_string string_buf s;
         string_lit lexbuf }
+  (* fallback *)
   | _ as c
       { raise (LexicalError (lexer_pos lexbuf ^ Printf.sprintf ": Invalid character in string: '%c'" c)) }

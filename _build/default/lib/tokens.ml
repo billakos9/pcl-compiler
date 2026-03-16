@@ -1,5 +1,5 @@
 type token =
-  (* Keywords *)
+  (* Keywords (As shown in pdf) *)
   | T_and
   | T_array
   | T_begin

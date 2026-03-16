@@ -1,24 +1,43 @@
-# 1 "lib/lexer.mll"
+# 2 "lib/lexer.mll"
  
   open Tokens
 
+  (* exception for strings not understood (ie. @#$) *)
   exception LexicalError of string
 
   (* Buffer for building string literals *)
   let string_buf = Buffer.create 64
 
-  (* Decode a PCL escape sequence character *)
-  let decode_escape c = match c with
+  (*    lexer_pos returns "line X, col Y" for the current lexbuf position.
+        
+        lexeme_start_p returns a Lexing.position record for the start of
+        the current lexeme; 
+        
+        pos_lnum is the current line number (1-based),
+        
+        pos_cnum is the absolute character offset from the start of the input
+        
+        pos_bol is the offset of the beginning of the current line
+    *)
+
+  let lexer_pos lexbuf =
+    let pos = Lexing.lexeme_start_p lexbuf in
+    Printf.sprintf "line %d, col %d" pos.pos_lnum (pos.pos_cnum - pos.pos_bol)
+
+  (* function that inputs c and returns the correct character *)
+  (* escape sequences *)
+  let decode_escape lexbuf c = match c with
     | 'n'  -> '\n'
     | 't'  -> '\t'
     | 'r'  -> '\r'
-    | '0'  -> '\000'
-    | '\\' -> '\\'
-    | '\'' -> '\''
-    | '"'  -> '"'
-    | _    -> raise (LexicalError (Printf.sprintf "Unknown escape sequence: \\%c" c))
+    | '0'  -> '\000' (* Ocaml null = \000 (octal) or \x00 (hex) *)
+    | '\\' -> '\\'  (* stays the same: \ char = \\  in Ocaml *)
+    | '\'' -> '\''  (* stays the same: ' char = \' in Ocaml *)
+    | '"'  -> '"'   (* pcl source = \" but in Ocaml is '"' no backspace needed *)
+    (* _ = else *)
+    | _    -> raise (LexicalError (lexer_pos lexbuf ^ Printf.sprintf ": Unknown escape sequence: \\%c" c))
 
-# 22 "lib/lexer.ml"
+# 41 "lib/lexer.ml"
 let __ocaml_lex_tables = {
   Lexing.lex_base =
    "\000\000\193\255\194\255\195\255\196\255\197\255\199\255\201\255\
@@ -2633,337 +2652,337 @@ let rec token lexbuf =
 and __ocaml_lex_token_rec lexbuf __ocaml_lex_state =
   match Lexing.engine __ocaml_lex_tables __ocaml_lex_state lexbuf with
       | 0 ->
-# 38 "lib/lexer.mll"
+# 60 "lib/lexer.mll"
                   ( token lexbuf )
-# 2639 "lib/lexer.ml"
+# 2658 "lib/lexer.ml"
 
   | 1 ->
-# 41 "lib/lexer.mll"
+# 63 "lib/lexer.mll"
                   ( comment lexbuf )
-# 2644 "lib/lexer.ml"
+# 2663 "lib/lexer.ml"
 
   | 2 ->
-# 46 "lib/lexer.mll"
+# 66 "lib/lexer.mll"
                   ( T_and )
-# 2649 "lib/lexer.ml"
+# 2668 "lib/lexer.ml"
 
   | 3 ->
-# 47 "lib/lexer.mll"
+# 67 "lib/lexer.mll"
                   ( T_array )
-# 2654 "lib/lexer.ml"
+# 2673 "lib/lexer.ml"
 
   | 4 ->
-# 48 "lib/lexer.mll"
+# 68 "lib/lexer.mll"
                   ( T_begin )
-# 2659 "lib/lexer.ml"
+# 2678 "lib/lexer.ml"
 
   | 5 ->
-# 49 "lib/lexer.mll"
+# 69 "lib/lexer.mll"
                   ( T_boolean )
-# 2664 "lib/lexer.ml"
+# 2683 "lib/lexer.ml"
 
   | 6 ->
-# 50 "lib/lexer.mll"
+# 70 "lib/lexer.mll"
                   ( T_char )
-# 2669 "lib/lexer.ml"
+# 2688 "lib/lexer.ml"
 
   | 7 ->
-# 51 "lib/lexer.mll"
+# 71 "lib/lexer.mll"
                   ( T_dispose )
-# 2674 "lib/lexer.ml"
+# 2693 "lib/lexer.ml"
 
   | 8 ->
-# 52 "lib/lexer.mll"
+# 72 "lib/lexer.mll"
                   ( T_div )
-# 2679 "lib/lexer.ml"
+# 2698 "lib/lexer.ml"
 
   | 9 ->
-# 53 "lib/lexer.mll"
+# 73 "lib/lexer.mll"
                   ( T_do )
-# 2684 "lib/lexer.ml"
+# 2703 "lib/lexer.ml"
 
   | 10 ->
-# 54 "lib/lexer.mll"
+# 74 "lib/lexer.mll"
                   ( T_else )
-# 2689 "lib/lexer.ml"
+# 2708 "lib/lexer.ml"
 
   | 11 ->
-# 55 "lib/lexer.mll"
+# 75 "lib/lexer.mll"
                   ( T_end )
-# 2694 "lib/lexer.ml"
+# 2713 "lib/lexer.ml"
 
   | 12 ->
-# 56 "lib/lexer.mll"
+# 76 "lib/lexer.mll"
                   ( T_false )
-# 2699 "lib/lexer.ml"
+# 2718 "lib/lexer.ml"
 
   | 13 ->
-# 57 "lib/lexer.mll"
+# 77 "lib/lexer.mll"
                   ( T_forward )
-# 2704 "lib/lexer.ml"
+# 2723 "lib/lexer.ml"
 
   | 14 ->
-# 58 "lib/lexer.mll"
+# 78 "lib/lexer.mll"
                   ( T_function )
-# 2709 "lib/lexer.ml"
+# 2728 "lib/lexer.ml"
 
   | 15 ->
-# 59 "lib/lexer.mll"
+# 79 "lib/lexer.mll"
                   ( T_goto )
-# 2714 "lib/lexer.ml"
+# 2733 "lib/lexer.ml"
 
   | 16 ->
-# 60 "lib/lexer.mll"
+# 80 "lib/lexer.mll"
                   ( T_if )
-# 2719 "lib/lexer.ml"
+# 2738 "lib/lexer.ml"
 
   | 17 ->
-# 61 "lib/lexer.mll"
+# 81 "lib/lexer.mll"
                   ( T_integer )
-# 2724 "lib/lexer.ml"
+# 2743 "lib/lexer.ml"
 
   | 18 ->
-# 62 "lib/lexer.mll"
+# 82 "lib/lexer.mll"
                   ( T_label )
-# 2729 "lib/lexer.ml"
+# 2748 "lib/lexer.ml"
 
   | 19 ->
-# 63 "lib/lexer.mll"
+# 83 "lib/lexer.mll"
                   ( T_mod )
-# 2734 "lib/lexer.ml"
+# 2753 "lib/lexer.ml"
 
   | 20 ->
-# 64 "lib/lexer.mll"
+# 84 "lib/lexer.mll"
                   ( T_new )
-# 2739 "lib/lexer.ml"
+# 2758 "lib/lexer.ml"
 
   | 21 ->
-# 65 "lib/lexer.mll"
+# 85 "lib/lexer.mll"
                   ( T_nil )
-# 2744 "lib/lexer.ml"
+# 2763 "lib/lexer.ml"
 
   | 22 ->
-# 66 "lib/lexer.mll"
+# 86 "lib/lexer.mll"
                   ( T_not )
-# 2749 "lib/lexer.ml"
+# 2768 "lib/lexer.ml"
 
   | 23 ->
-# 67 "lib/lexer.mll"
+# 87 "lib/lexer.mll"
                   ( T_of )
-# 2754 "lib/lexer.ml"
+# 2773 "lib/lexer.ml"
 
   | 24 ->
-# 68 "lib/lexer.mll"
+# 88 "lib/lexer.mll"
                   ( T_or )
-# 2759 "lib/lexer.ml"
+# 2778 "lib/lexer.ml"
 
   | 25 ->
-# 69 "lib/lexer.mll"
+# 89 "lib/lexer.mll"
                   ( T_procedure )
-# 2764 "lib/lexer.ml"
+# 2783 "lib/lexer.ml"
 
   | 26 ->
-# 70 "lib/lexer.mll"
+# 90 "lib/lexer.mll"
                   ( T_program )
-# 2769 "lib/lexer.ml"
+# 2788 "lib/lexer.ml"
 
   | 27 ->
-# 71 "lib/lexer.mll"
+# 91 "lib/lexer.mll"
                   ( T_real )
-# 2774 "lib/lexer.ml"
+# 2793 "lib/lexer.ml"
 
   | 28 ->
-# 72 "lib/lexer.mll"
+# 92 "lib/lexer.mll"
                   ( T_result )
-# 2779 "lib/lexer.ml"
+# 2798 "lib/lexer.ml"
 
   | 29 ->
-# 73 "lib/lexer.mll"
+# 93 "lib/lexer.mll"
                   ( T_return )
-# 2784 "lib/lexer.ml"
+# 2803 "lib/lexer.ml"
 
   | 30 ->
-# 74 "lib/lexer.mll"
+# 94 "lib/lexer.mll"
                   ( T_then )
-# 2789 "lib/lexer.ml"
+# 2808 "lib/lexer.ml"
 
   | 31 ->
-# 75 "lib/lexer.mll"
+# 95 "lib/lexer.mll"
                   ( T_true )
-# 2794 "lib/lexer.ml"
+# 2813 "lib/lexer.ml"
 
   | 32 ->
-# 76 "lib/lexer.mll"
+# 96 "lib/lexer.mll"
                   ( T_var )
-# 2799 "lib/lexer.ml"
+# 2818 "lib/lexer.ml"
 
   | 33 ->
-# 77 "lib/lexer.mll"
+# 97 "lib/lexer.mll"
                   ( T_while )
-# 2804 "lib/lexer.ml"
+# 2823 "lib/lexer.ml"
 
   | 34 ->
-# 80 "lib/lexer.mll"
+# 101 "lib/lexer.mll"
                      ( T_id (Lexing.lexeme lexbuf) )
-# 2809 "lib/lexer.ml"
+# 2828 "lib/lexer.ml"
 
   | 35 ->
-# 83 "lib/lexer.mll"
+# 104 "lib/lexer.mll"
                      ( T_real_const (float_of_string (Lexing.lexeme lexbuf)) )
-# 2814 "lib/lexer.ml"
+# 2833 "lib/lexer.ml"
 
   | 36 ->
-# 86 "lib/lexer.mll"
+# 107 "lib/lexer.mll"
                      ( T_int_const (int_of_string (Lexing.lexeme lexbuf)) )
-# 2819 "lib/lexer.ml"
+# 2838 "lib/lexer.ml"
 
   | 37 ->
 let
-# 89 "lib/lexer.mll"
+# 110 "lib/lexer.mll"
                          c
-# 2825 "lib/lexer.ml"
+# 2844 "lib/lexer.ml"
 = Lexing.sub_lexeme_char lexbuf (lexbuf.Lexing.lex_start_pos + 1) in
-# 90 "lib/lexer.mll"
+# 111 "lib/lexer.mll"
       ( T_char_const c )
-# 2829 "lib/lexer.ml"
+# 2848 "lib/lexer.ml"
 
   | 38 ->
 let
-# 91 "lib/lexer.mll"
+# 113 "lib/lexer.mll"
                                                   c
-# 2835 "lib/lexer.ml"
+# 2854 "lib/lexer.ml"
 = Lexing.sub_lexeme_char lexbuf (lexbuf.Lexing.lex_start_pos + 2) in
-# 92 "lib/lexer.mll"
-      ( T_char_const (decode_escape c) )
-# 2839 "lib/lexer.ml"
+# 114 "lib/lexer.mll"
+      ( T_char_const (decode_escape lexbuf c) )
+# 2858 "lib/lexer.ml"
 
   | 39 ->
-# 96 "lib/lexer.mll"
-      ( Buffer.clear string_buf;
+# 118 "lib/lexer.mll"
+      ( Buffer.clear string_buf;    (* clean buffer from previous reads *)
         string_lit lexbuf )
-# 2845 "lib/lexer.ml"
+# 2864 "lib/lexer.ml"
 
   | 40 ->
-# 100 "lib/lexer.mll"
+# 122 "lib/lexer.mll"
           ( T_assign )
-# 2850 "lib/lexer.ml"
+# 2869 "lib/lexer.ml"
 
   | 41 ->
-# 101 "lib/lexer.mll"
+# 123 "lib/lexer.mll"
           ( T_ne )
-# 2855 "lib/lexer.ml"
+# 2874 "lib/lexer.ml"
 
   | 42 ->
-# 102 "lib/lexer.mll"
+# 124 "lib/lexer.mll"
           ( T_ge )
-# 2860 "lib/lexer.ml"
+# 2879 "lib/lexer.ml"
 
   | 43 ->
-# 103 "lib/lexer.mll"
+# 125 "lib/lexer.mll"
           ( T_le )
-# 2865 "lib/lexer.ml"
+# 2884 "lib/lexer.ml"
 
   | 44 ->
-# 106 "lib/lexer.mll"
+# 128 "lib/lexer.mll"
           ( T_eq )
-# 2870 "lib/lexer.ml"
+# 2889 "lib/lexer.ml"
 
   | 45 ->
-# 107 "lib/lexer.mll"
+# 129 "lib/lexer.mll"
           ( T_lt )
-# 2875 "lib/lexer.ml"
+# 2894 "lib/lexer.ml"
 
   | 46 ->
-# 108 "lib/lexer.mll"
+# 130 "lib/lexer.mll"
           ( T_gt )
-# 2880 "lib/lexer.ml"
+# 2899 "lib/lexer.ml"
 
   | 47 ->
-# 109 "lib/lexer.mll"
+# 131 "lib/lexer.mll"
           ( T_plus )
-# 2885 "lib/lexer.ml"
+# 2904 "lib/lexer.ml"
 
   | 48 ->
-# 110 "lib/lexer.mll"
+# 132 "lib/lexer.mll"
           ( T_minus )
-# 2890 "lib/lexer.ml"
+# 2909 "lib/lexer.ml"
 
   | 49 ->
-# 111 "lib/lexer.mll"
+# 133 "lib/lexer.mll"
           ( T_times )
-# 2895 "lib/lexer.ml"
+# 2914 "lib/lexer.ml"
 
   | 50 ->
-# 112 "lib/lexer.mll"
+# 134 "lib/lexer.mll"
           ( T_fdiv )
-# 2900 "lib/lexer.ml"
+# 2919 "lib/lexer.ml"
 
   | 51 ->
-# 113 "lib/lexer.mll"
+# 135 "lib/lexer.mll"
           ( T_caret )
-# 2905 "lib/lexer.ml"
+# 2924 "lib/lexer.ml"
 
   | 52 ->
-# 114 "lib/lexer.mll"
+# 136 "lib/lexer.mll"
           ( T_at )
-# 2910 "lib/lexer.ml"
+# 2929 "lib/lexer.ml"
 
   | 53 ->
-# 117 "lib/lexer.mll"
+# 139 "lib/lexer.mll"
           ( T_semicolon )
-# 2915 "lib/lexer.ml"
+# 2934 "lib/lexer.ml"
 
   | 54 ->
-# 118 "lib/lexer.mll"
+# 140 "lib/lexer.mll"
           ( T_dot )
-# 2920 "lib/lexer.ml"
+# 2939 "lib/lexer.ml"
 
   | 55 ->
-# 119 "lib/lexer.mll"
+# 141 "lib/lexer.mll"
           ( T_lparen )
-# 2925 "lib/lexer.ml"
+# 2944 "lib/lexer.ml"
 
   | 56 ->
-# 120 "lib/lexer.mll"
+# 142 "lib/lexer.mll"
           ( T_rparen )
-# 2930 "lib/lexer.ml"
+# 2949 "lib/lexer.ml"
 
   | 57 ->
-# 121 "lib/lexer.mll"
+# 143 "lib/lexer.mll"
           ( T_colon )
-# 2935 "lib/lexer.ml"
+# 2954 "lib/lexer.ml"
 
   | 58 ->
-# 122 "lib/lexer.mll"
+# 144 "lib/lexer.mll"
           ( T_comma )
-# 2940 "lib/lexer.ml"
+# 2959 "lib/lexer.ml"
 
   | 59 ->
-# 123 "lib/lexer.mll"
+# 145 "lib/lexer.mll"
           ( T_lbracket )
-# 2945 "lib/lexer.ml"
+# 2964 "lib/lexer.ml"
 
   | 60 ->
-# 124 "lib/lexer.mll"
+# 146 "lib/lexer.mll"
           ( T_rbracket )
-# 2950 "lib/lexer.ml"
+# 2969 "lib/lexer.ml"
 
   | 61 ->
-# 126 "lib/lexer.mll"
+# 148 "lib/lexer.mll"
           ( T_eof )
-# 2955 "lib/lexer.ml"
+# 2974 "lib/lexer.ml"
 
   | 62 ->
 let
-# 128 "lib/lexer.mll"
+# 150 "lib/lexer.mll"
          c
-# 2961 "lib/lexer.ml"
+# 2980 "lib/lexer.ml"
 = Lexing.sub_lexeme_char lexbuf lexbuf.Lexing.lex_start_pos in
-# 129 "lib/lexer.mll"
+# 151 "lib/lexer.mll"
       ( raise (LexicalError
           (Printf.sprintf "Unexpected character: '%c' (ASCII %d)"
              c (Char.code c))) )
-# 2967 "lib/lexer.ml"
+# 2986 "lib/lexer.ml"
 
   | __ocaml_lex_state -> lexbuf.Lexing.refill_buff lexbuf;
       __ocaml_lex_token_rec lexbuf __ocaml_lex_state
@@ -2973,19 +2992,19 @@ and comment lexbuf =
 and __ocaml_lex_comment_rec lexbuf __ocaml_lex_state =
   match Lexing.engine __ocaml_lex_tables __ocaml_lex_state lexbuf with
       | 0 ->
-# 135 "lib/lexer.mll"
+# 157 "lib/lexer.mll"
           ( token lexbuf )
-# 2979 "lib/lexer.ml"
+# 2998 "lib/lexer.ml"
 
   | 1 ->
-# 136 "lib/lexer.mll"
-          ( raise (LexicalError "Unterminated comment") )
-# 2984 "lib/lexer.ml"
+# 158 "lib/lexer.mll"
+          ( raise (LexicalError (lexer_pos lexbuf ^ ": Unterminated comment")) )
+# 3003 "lib/lexer.ml"
 
   | 2 ->
-# 137 "lib/lexer.mll"
+# 159 "lib/lexer.mll"
           ( comment lexbuf )
-# 2989 "lib/lexer.ml"
+# 3008 "lib/lexer.ml"
 
   | __ocaml_lex_state -> lexbuf.Lexing.refill_buff lexbuf;
       __ocaml_lex_comment_rec lexbuf __ocaml_lex_state
@@ -2995,52 +3014,51 @@ and string_lit lexbuf =
 and __ocaml_lex_string_lit_rec lexbuf __ocaml_lex_state =
   match Lexing.engine __ocaml_lex_tables __ocaml_lex_state lexbuf with
       | 0 ->
-# 142 "lib/lexer.mll"
+# 166 "lib/lexer.mll"
       ( T_string_const (Buffer.contents string_buf) )
-# 3001 "lib/lexer.ml"
+# 3020 "lib/lexer.ml"
 
   | 1 ->
 let
-# 143 "lib/lexer.mll"
+# 168 "lib/lexer.mll"
                                              c
-# 3007 "lib/lexer.ml"
+# 3026 "lib/lexer.ml"
 = Lexing.sub_lexeme_char lexbuf (lexbuf.Lexing.lex_start_pos + 1) in
-# 144 "lib/lexer.mll"
-      ( Buffer.add_char string_buf (decode_escape c);
+# 169 "lib/lexer.mll"
+      ( Buffer.add_char string_buf (decode_escape lexbuf c);
         string_lit lexbuf )
-# 3012 "lib/lexer.ml"
+# 3031 "lib/lexer.ml"
 
   | 2 ->
-# 147 "lib/lexer.mll"
-      ( raise (LexicalError "Unterminated string literal (newline inside string)") )
-# 3017 "lib/lexer.ml"
+# 173 "lib/lexer.mll"
+      ( raise (LexicalError (lexer_pos lexbuf ^ ": Unterminated string literal (newline inside string)")) )
+# 3036 "lib/lexer.ml"
 
   | 3 ->
-# 149 "lib/lexer.mll"
-      ( raise (LexicalError "Unterminated string literal") )
-# 3022 "lib/lexer.ml"
+# 175 "lib/lexer.mll"
+      ( raise (LexicalError (lexer_pos lexbuf ^ ": Unterminated string literal")) )
+# 3041 "lib/lexer.ml"
 
   | 4 ->
 let
-# 150 "lib/lexer.mll"
+# 177 "lib/lexer.mll"
                     s
-# 3028 "lib/lexer.ml"
+# 3047 "lib/lexer.ml"
 = Lexing.sub_lexeme lexbuf lexbuf.Lexing.lex_start_pos lexbuf.Lexing.lex_curr_pos in
-# 151 "lib/lexer.mll"
+# 178 "lib/lexer.mll"
       ( Buffer.add_string string_buf s;
         string_lit lexbuf )
-# 3033 "lib/lexer.ml"
+# 3052 "lib/lexer.ml"
 
   | 5 ->
 let
-# 153 "lib/lexer.mll"
+# 181 "lib/lexer.mll"
          c
-# 3039 "lib/lexer.ml"
+# 3058 "lib/lexer.ml"
 = Lexing.sub_lexeme_char lexbuf lexbuf.Lexing.lex_start_pos in
-# 154 "lib/lexer.mll"
-      ( raise (LexicalError
-          (Printf.sprintf "Invalid character in string: '%c'" c)) )
-# 3044 "lib/lexer.ml"
+# 182 "lib/lexer.mll"
+      ( raise (LexicalError (lexer_pos lexbuf ^ Printf.sprintf ": Invalid character in string: '%c'" c)) )
+# 3062 "lib/lexer.ml"
 
   | __ocaml_lex_state -> lexbuf.Lexing.refill_buff lexbuf;
       __ocaml_lex_string_lit_rec lexbuf __ocaml_lex_state
