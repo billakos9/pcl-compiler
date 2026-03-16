@@ -1,0 +1,38 @@
+
+** Conflict (reduce/reduce) in state 77.
+** Tokens involved: T_times T_plus T_or T_ne T_mod T_minus T_lt T_le T_gt T_ge T_fdiv T_eq T_div T_caret T_and
+** The following explanations concentrate on token T_times.
+** This state is reached from program after reading:
+
+T_program T_id T_semicolon locals T_begin T_at lvalue
+
+** The derivations that appear below have the following common factor:
+** (The question mark symbol (?) represents the spot where the derivations begin to differ.)
+
+program 
+T_program T_id T_semicolon body T_dot T_eof 
+                           locals block 
+                                  T_begin stmt_list T_end 
+                                          stmt 
+                                          lvalue T_assign expr 
+                                          expr T_caret 
+                                          rvalue 
+                                          (?)
+
+** In state 77, looking ahead at T_times, reducing production
+** expr -> lvalue
+** is permitted because of the following sub-derivation:
+
+T_at lvalue 
+     expr T_caret 
+     rvalue 
+     expr T_times expr // lookahead token appears
+     lvalue . 
+
+** In state 77, looking ahead at T_times, reducing production
+** rvalue -> T_at lvalue
+** is permitted because of the following sub-derivation:
+
+expr T_times expr // lookahead token appears
+rvalue // lookahead token is inherited
+T_at lvalue . 

@@ -46,6 +46,19 @@
 %token T_eof
 
 %start <unit> program
+
+(* ── Operator precedence (lowest to highest) ── *)
+%nonassoc T_then              (* dangling else: shift "else" over "then" *)
+%nonassoc T_else
+%left     T_or
+%left     T_and
+%nonassoc T_not
+%nonassoc T_eq T_ne T_lt T_gt T_le T_ge
+%left     T_plus T_minus
+%left     T_times T_fdiv T_div T_mod
+%nonassoc UNARY               (* unary +, - *)
+%nonassoc T_caret             (* p^ dereference — highest *)
+
 %%
 
 (* ═══════════════════════════════════════════════════════════
@@ -170,9 +183,9 @@ rvalue:
 | T_lparen rvalue T_rparen   { () }  (* (r-value)         *)
 | call                       { () }  (* foo(x, y)         *)
 | T_at lvalue                { () }  (* @x  (address-of)  *)
-| T_not expr                 { () }  (* not x             *)
-| T_plus expr                { () }  (* +x  (unary plus)  *)
-| T_minus expr               { () }  (* -x  (unary minus) *)
+| T_not expr                 %prec T_not   { () }  (* not x             *)
+| T_plus expr                %prec UNARY   { () }  (* +x  (unary plus)  *)
+| T_minus expr               %prec UNARY   { () }  (* -x  (unary minus) *)
 | expr T_plus expr           { () }  (* x + y             *)
 | expr T_minus expr          { () }  (* x - y             *)
 | expr T_times expr          { () }  (* x * y             *)
