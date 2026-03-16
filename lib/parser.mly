@@ -128,6 +128,7 @@ typ:
 | T_char                                              { () }  (* char               *)
 | T_array T_lbracket T_int_const T_rbracket T_of typ  { () }  (* array [10] of int  *)
 | T_array T_lbracket T_rbracket T_of typ              { () }  (* array [] of int    *)
+| T_array T_of typ                                    { () }  (* array of int       *)
 | T_caret typ                                         { () }  (* ^integer (pointer) *)
 
 (* ═══════════════════════════════════════════════════════════

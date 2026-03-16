@@ -1,4 +1,4 @@
-# dune exec bin/main.exe -- pcl/programs/primes.pcl
+# dune exec bin/main.exe -- pcl/programs/test.pcl
 # OCAMLPARAM: unset
 # Shared cache: enabled-except-user-rules
 # Shared cache location: /Users/vafentoulidis/.cache/dune/db
@@ -14,4 +14,4 @@
 #  ; build_dir = In_build_dir "default"
 #  ; instrument_with = []
 #  }
-$ /Users/vafentoulidis/.opam/compilers-ntua/bin/ocamlc.opt -config > /var/folders/v7/0mm4n62d111124250t0ytc1m0000gn/T/dune_d823df_output
+$ /Users/vafentoulidis/.opam/compilers-ntua/bin/ocamlc.opt -config > /var/folders/v7/0mm4n62d111124250t0ytc1m0000gn/T/dune_b29b9a_output
