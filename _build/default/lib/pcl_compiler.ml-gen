@@ -17,6 +17,3 @@ module Semantic = Pcl_compiler__Semantic
 
 (** @canonical Pcl_compiler.Symbol *)
 module Symbol = Pcl_compiler__Symbol
-
-(** @canonical Pcl_compiler.Tokens *)
-module Tokens = Pcl_compiler__Tokens
