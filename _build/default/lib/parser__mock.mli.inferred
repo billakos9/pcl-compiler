@@ -59,21 +59,21 @@ type token =
   | T_array
   | T_and
 val menhir_begin_marker : int
-val xv_var_decl_list : unit
-val xv_var_decl : unit
-val xv_typ : unit
-val xv_stmt_list : unit
-val xv_stmt : unit
-val xv_program : unit
-val xv_locals : unit
-val xv_local : unit
-val xv_id_list : unit
-val xv_header : unit
-val xv_formal_list : unit
-val xv_formal : unit
-val xv_expr_list : unit
-val xv_expr : unit
-val xv_call : unit
-val xv_body : unit
-val xv_block : unit
+val xv_var_decl_list : (string list * Ast.typ) list
+val xv_var_decl : string list * Ast.typ
+val xv_typ : Ast.typ
+val xv_stmt_list : Ast.stmt list
+val xv_stmt : Ast.stmt
+val xv_program : Ast.program
+val xv_locals : Ast.local list
+val xv_local : Ast.local
+val xv_id_list : string list
+val xv_header : Ast.header
+val xv_formal_list : Ast.formal list
+val xv_formal : Ast.formal
+val xv_expr_list : Ast.expr list
+val xv_expr : Ast.expr
+val xv_call : string * Ast.expr list
+val xv_body : Ast.body
+val xv_block : Ast.stmt list
 val menhir_end_marker : int

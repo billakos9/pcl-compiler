@@ -44,18 +44,18 @@ type expr =
 (* ── Statements ── *)
 type stmt =
   | SEmpty
-  | SAssign      of expr * expr              (* lval := expr          *)
-  | SBlock       of stmt list                (* begin ... end         *)
-  | SCall        of string * expr list       (* procedure call        *)
-  | SIf          of expr * stmt * stmt option
-  | SWhile       of expr * stmt
-  | SLabel       of string * stmt            (* myLabel: stmt         *)
-  | SGoto        of string
+  | SAssign       of expr * expr              (* lval := expr          *)
+  | SBlock        of stmt list                (* begin ... end         *)
+  | SCall         of string * expr list       (* procedure call        *)
+  | SIf           of expr * stmt * stmt option
+  | SWhile        of expr * stmt
+  | SLabel        of string * stmt            (* myLabel: stmt         *)
+  | SGoto         of string
   | SReturn
-  | SNew         of expr                     (* new p                 *)
-  | SNewArray    of expr * expr              (* new [n] arr           *)
-  | SDispose     of expr                     (* dispose p             *)
-  | SDisposeArray of expr                    (* dispose [] arr        *)
+  | SNew          of expr                     (* new p                 *)
+  | SNewArray     of expr * expr              (* new [n] arr           *)
+  | SDispose      of expr                     (* dispose p             *)
+  | SDisposeArray of expr                     (* dispose [] arr        *)
 
 (* ── Formal parameters ── *)
 type pass_mode = ByValue | ByRef
@@ -69,10 +69,10 @@ type header =
 
 (* ── Local declarations & body (mutually recursive) ── *)
 type local =
-  | LVar     of string list * typ   (* var x, y : integer; *)
-  | LLabel   of string list         (* label foo, bar;     *)
-  | LDef     of header * body       (* proc/func + body    *)
-  | LForward of header              (* forward decl        *)
+  | LVar     of (string list * typ) list   (* var x,y:int; a:bool; — all groups under one var *)
+  | LLabel   of string list                (* label foo, bar;       *)
+  | LDef     of header * body              (* proc/func + body      *)
+  | LForward of header                     (* forward decl          *)
 
 and body = {
   locals : local list;
