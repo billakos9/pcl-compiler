@@ -41,6 +41,17 @@ let rec add_formals table formals =
       let updated_table = add_names table names typ in
       add_formals updated_table rest
 
+
+(* expand formals makes the list vertical , one entry for each parameter *)
+let rec expand_formals formals =
+   match formals with 
+   | [] -> []
+   | (mode, names, typ) :: rest ->
+      let current =
+         List.map (fun name -> (name, mode, typ)) names
+      in
+      current @ expand_formals rest
+
 (* 
 ----------------------
 helper functions ended
@@ -161,7 +172,7 @@ and check_stmt table return_type stmt =
    
    | SReturn -> ()
    
-   | SLabel (name, stmt) ->
+   | SLabel (_name, stmt) ->
       check_stmt table return_type stmt
    
    | SGoto _ -> ()
