@@ -102,7 +102,7 @@ let rec check_expr table return_type expr =
             | (BAnd | BOr), _, _ -> raise (TypeError "and/or requires booleans")
          )
       | EString _ -> TArray(None, TChar)
-      | ECall (name, args) ->
+      | ECall (name, _args) ->
          ( match lookup table name with
             | None -> raise (TypeError ("undefined function: " ^ name))
             | Some (SVar _) -> raise (TypeError (name ^ " is not a function"))
@@ -164,7 +164,7 @@ and check_stmt table return_type stmt =
       else 
          check_stmt table return_type body
       
-   | SCall (name, args) ->
+   | SCall (name, _args) ->
       (match lookup table name with
       | None -> raise(TypeError ("undefined procedure: " ^ name))
       | Some (SVar _) -> raise (TypeError (name ^ " is not a procedure"))
