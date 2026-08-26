@@ -106,9 +106,11 @@ rule token = parse
   (* ── Integer literals ── *)
   | integer          { T_int_const (int_of_string (Lexing.lexeme lexbuf)) }   (* conversion to string *)
 
+  (* '\'' - this in OCaml represents the single quote character *)
   (* ── Character literals  'x'  or  '\n' ── *)
   | '\'' (common_char as c) '\''
       { T_char_const c }
+  (* '\\' - this in OCaml represents the one backslash character *)
   (* escape char literal *)
   | '\'' '\\' (['n' 't' 'r' '0' '\\' '\'' '"'] as c) '\''
       { T_char_const (decode_escape lexbuf c) }
