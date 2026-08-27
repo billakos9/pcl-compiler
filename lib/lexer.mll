@@ -118,7 +118,7 @@ rule token = parse
   (* ── String literals  "..." ── *)
   | '"'
       { Buffer.clear string_buf;    (* clean buffer from previous reads *)
-        string_lit lexbuf }
+        string_lit lexbuf }         (* string_lit rule at the end *)
 
   (* ── Two-character operators (must come before single-char ones) ── *)
   | ":="  { T_assign }
