@@ -1,0 +1,4 @@
+(executable
+ (name lexer_inspect)
+ (modules lexer_inspect)
+ (libraries pcl_compiler))

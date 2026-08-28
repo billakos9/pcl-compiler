@@ -79,9 +79,11 @@ let run_lexer lexbuf =
 (* ── Phase 2: Parse ─────────────────────────────────────────────── *)
 let run_parser lexbuf =
   try
-    let ast = Pcl_compiler.Parser.program Pcl_compiler.Lexer.token lexbuf in
-    Printf.printf "Parsing OK\n";
-    Pcl_compiler.Ast_printer.print_program ast
+    let _ast =
+      Pcl_compiler.Parser.program Pcl_compiler.Lexer.token
+    lexbuf
+    in
+    Printf.printf "Parsing OK\n"
   with
   | Pcl_compiler.Lexer.LexicalError msg ->
       Printf.eprintf "Lexical error: %s\n" msg; exit 1
