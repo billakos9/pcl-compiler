@@ -17,7 +17,7 @@ let () =
     if Array.length Sys.argv <> 2 then begin
       Printf.eprintf "Usage: parser_inspect <file.pcl>\n";
       exit 1
-    end
+    end;
 
     let filename = Sys.argv.(1) in
 
