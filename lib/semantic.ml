@@ -52,6 +52,16 @@ let rec expand_formals formals =
       in
       current @ expand_formals rest
 
+
+(* lvalue or byref ?*)
+let rec is_lvalue expr =
+   match expr with
+   | EId _ -> true
+   | EResult -> true
+   | EString _ -> true
+   | EIndex (arr, _) -> is_lvalue arr
+   | EUnop (UDeref, _) -> true
+   | _ -> false
 (* 
 ----------------------
 helper functions ended
