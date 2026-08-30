@@ -1,4 +1,4 @@
-open Ast
+open Pcl_compiler.Ast
 
 (* =========================================================
    Pretty-printer  –  prints the AST as an indented tree

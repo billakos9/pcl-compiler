@@ -2,3 +2,8 @@
  (name lexer_inspect)
  (modules lexer_inspect)
  (libraries pcl_compiler))
+
+(executable
+ (name parser_inspect)
+ (modules parser_inspect ast_printer)
+ (libraries pcl_compiler))
