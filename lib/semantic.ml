@@ -102,11 +102,13 @@ let rec check_expr table return_type expr =
             | (BAnd | BOr), _, _ -> raise (TypeError "and/or requires booleans")
          )
       | EString _ -> TArray(None, TChar)
-      | ECall (name, _args) ->
+      | ECall (name, args) ->
          ( match lookup table name with
             | None -> raise (TypeError ("undefined function: " ^ name))
             | Some (SVar _) -> raise (TypeError (name ^ " is not a function"))
-            | Some (SFunc (_, ret)) ->
+            | Some (SFunc (formals, ret)) ->
+               check_arguments table return_type formals args;
+               
                ( match ret with
                   | Some t -> t
                   | None -> raise (TypeError (name^ " is a procedure, has no value"))
@@ -132,6 +134,32 @@ let rec check_expr table return_type expr =
          | TArray(_, _), _ -> raise (TypeError "array index must be integer")
          | _, _ -> raise (TypeError "cannot index a non-array")
          )
+
+and check_arguments table return_type formals args =
+   let expected = expand_formals formals in
+
+   let rec compare expected actual =
+      match expected, actual with
+      | [], [] -> ()
+      | [], _ :: _ ->
+         raise (TypeError "too many arguments")
+      | _ :: _, [] ->
+         raise (TypeError "not enough arguments")
+      | (parameter_name, _mode, expected_type) :: expected_rest,
+      argument :: argument_rest ->
+
+         let actual_type =
+            check_expr table return_type argument
+         in
+
+         if actual_type = expected_type then
+            compare expected_rest argument_rest
+         else
+            raise (TypeError ("wrong type for argument " ^parameter_name))
+      
+   in
+   compare expected args
+
 and check_stmt table return_type stmt =
    match stmt with
    | SEmpty -> ()
