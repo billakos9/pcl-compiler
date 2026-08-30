@@ -192,11 +192,18 @@ and check_stmt table return_type stmt =
       else 
          check_stmt table return_type body
       
-   | SCall (name, _args) ->
+   | SCall (name, args) ->
       (match lookup table name with
       | None -> raise(TypeError ("undefined procedure: " ^ name))
       | Some (SVar _) -> raise (TypeError (name ^ " is not a procedure"))
-      | Some (SFunc _) -> ())
+      | Some (SFunc (formals, ret)) -> (
+         match ret with
+         | Some _ ->
+            raise (TypeError (name ^" is a function, not a procedure"))
+         | None ->
+            check_arguments table return_type formals args;
+            ())
+      )
    
    | SReturn -> ()
    
