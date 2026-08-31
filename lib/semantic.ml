@@ -62,6 +62,7 @@ let rec is_lvalue expr =
    | EIndex (arr, _) -> is_lvalue arr
    | EUnop (UDeref, _) -> true
    | _ -> false
+
 (* 
 ----------------------
 helper functions ended
@@ -176,6 +177,9 @@ and check_stmt table return_type stmt =
 
    (* Type x = Type of the assigned value *)
    | SAssign (left, right) ->
+      (* safeguard for proper assignement *)
+      if not (is_lvalue left) then
+         raise(TypeError "assignment destination must be an lvalue");
       let t_left = check_expr table return_type left in
       let t_right = check_expr table return_type right in
       if t_left = t_right then ()
