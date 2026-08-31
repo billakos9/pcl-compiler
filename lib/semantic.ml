@@ -135,7 +135,11 @@ let rec check_expr table return_type expr =
             | UNot, _ -> raise (TypeError "not requires boolean")
             | UDeref, TPointer t -> t
             | UDeref, _ -> raise (TypeError "deref requires pointer")
-            | UAddrOf, t -> TPointer t
+            | UAddrOf, t -> 
+               if not (is_lvalue e) then
+                  raise (TypeError "address-of requires an lvalue");
+               
+               TPointer t
          )
       | EIndex(arr, idx) ->
          let t_arr = check_expr table return_type arr in
@@ -156,12 +160,15 @@ and check_arguments table return_type formals args =
          raise (TypeError "too many arguments")
       | _ :: _, [] ->
          raise (TypeError "not enough arguments")
-      | (parameter_name, _mode, expected_type) :: expected_rest,
+      | (parameter_name, mode, expected_type) :: expected_rest,
       argument :: argument_rest ->
 
          let actual_type =
             check_expr table return_type argument
          in
+
+         if mode = ByRef && not (is_lvalue argument) then
+            raise(TypeError ("argument " ^parameter_name ^" must be an lvalue"));
 
          if actual_type = expected_type then
             compare expected_rest argument_rest
