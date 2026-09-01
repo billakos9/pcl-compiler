@@ -124,10 +124,12 @@ let rec check_expr table return_type expr =
          let t1 = check_expr table return_type left in
          let t2 = check_expr table return_type right in
          ( match op ,t1, t2 with
-         (* Arithmetic - same type in , same type out *)
+         (* Arithmetic - same type in , same type out
+            not always, this is true only for integers *)
             | (BPlus | BMinus | BTimes), TInteger, TInteger -> TInteger
-            | (BPlus | BMinus | BTimes), TReal, TReal -> TReal
-            | (BPlus | BMinus | BTimes), _ , _ -> raise (TypeError "invalid types for + ")
+            | (BPlus | BMinus | BTimes), t1, t2 when is_numeric t1 && is_numeric t2 ->
+               TReal
+            | (BPlus | BMinus | BTimes), _ , _ -> raise (TypeError "+, - and * require numeric operands")
 
          (* integer only *)
             | (BDiv | BMod) , TInteger, TInteger -> TInteger
