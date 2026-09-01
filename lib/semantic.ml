@@ -63,6 +63,20 @@ let rec is_lvalue expr =
    | EUnop (UDeref, _) -> true
    | _ -> false
 
+
+let rec is_complete_type typ =
+   match typ with
+   | TInteger
+   | TReal
+   | TBoolean
+   | TChar -> true
+
+   | TArray (Some size, element_type) ->
+      size > 0 && is_complete_type element_type
+   
+   | TArray (None, _) -> false
+
+   | TPointer _ -> true
 (* 
 ----------------------
 helper functions ended
@@ -234,30 +248,42 @@ and check_stmt table return_type stmt =
    | SGoto _ -> ()
 
    | SNew e ->
+      if not (is_lvalue e) then
+         raise (TypeError "new requires an lvalue");
+      
       let t = check_expr table return_type e in
       (match t with 
       | TPointer _ -> ()
       | _ -> raise(TypeError "new requires pointer"))
    
    | SNewArray (size, arr) ->
+      if not (is_lvalue arr) then
+         raise(TypeError "new array requires an lvalue");
+
       let t_size = check_expr table return_type size in
       let t_arr = check_expr table return_type arr in
       (match t_size, t_arr with
-      | TInteger, TPointer (TArray _) -> ()
-      | TInteger, _ -> raise(TypeError "new array requires pointer to array")
+      | TInteger, TPointer (TArray (None, _)) -> ()
+      | TInteger, _ -> raise(TypeError "new array requires pointer to open array")
       | _, _ -> raise (TypeError "new array size must be integer"))
    
    | SDispose e ->
+      if not (is_lvalue e) then
+         raise (TypeError "dispose requires an lvalue");
+      
       let t = check_expr table return_type e in
       (match t with
       | TPointer _ -> ()
       | _ -> raise (TypeError "dispose requires pointer"))
 
    | SDisposeArray arr ->
+      if not (is_lvalue arr) then
+         raise (TypeError "dispose array requires an lvalue");
+
       let t = check_expr table return_type arr in
       (match t with
-      | TPointer (TArray _) -> ()
-      | _ -> raise(TypeError "dispose array requires pointer to array"))
+      | TPointer (TArray (None, _)) -> ()
+      | _ -> raise(TypeError "dispose array requires pointer to open array"))
 
 and check_local table local =
    match local with
