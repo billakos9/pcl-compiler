@@ -131,13 +131,14 @@ let rec check_expr table return_type expr =
                TReal
             | (BPlus | BMinus | BTimes), _ , _ -> raise (TypeError "+, - and * require numeric operands")
 
-         (* integer only *)
+         (* integer only: 5 div 2 *)
             | (BDiv | BMod) , TInteger, TInteger -> TInteger
             | (BDiv | BMod) , _, _ -> raise (TypeError " div/mod requires integers")
          
-         (* real division only *)
-            | BFDiv, TReal, TReal -> TReal
-            | BFDiv, _, _ -> raise (TypeError "/ requires reals")
+         (* real division (can be int also): 5 / 2 *)
+            | BFDiv, t1, t2 when is_numeric t1 && is_numeric t2 ->
+               TReal
+            | BFDiv, _, _ -> raise (TypeError "/ requires numeric operands")
 
          (* comparisons - any matching type, returns bool *)
             (* equality between numeric types, including mixed int/real *)
