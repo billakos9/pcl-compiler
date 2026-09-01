@@ -77,6 +77,7 @@ let rec is_complete_type typ =
    | TArray (None, _) -> false
 
    | TPointer _ -> true
+   | TNil -> false
 
 
 let is_assignment_compatible destination_type source_type =
@@ -85,6 +86,7 @@ let is_assignment_compatible destination_type source_type =
    | TPointer (TArray(None, destination_element)), TPointer (TArray (Some _, source_element)) -> 
       destination_element = source_element
    
+   | TPointer _, TNil -> true
    | _ ->
       destination_type = source_type && is_complete_type destination_type
 (* 
@@ -99,7 +101,7 @@ let rec check_expr table return_type expr =
       | EReal _ -> TReal
       | EBool _ -> TBoolean
       | EChar _ -> TChar
-      | ENil -> TPointer TInteger
+      | ENil -> TNil
       | EId name ->
          ( match lookup table name with
             | None -> raise (TypeError ("undefined variable : " ^ name))
@@ -215,7 +217,7 @@ and check_stmt table return_type stmt =
 
    (* Type x = Type of the assigned value *)
    | SAssign (left, right) ->
-      (* safeguard for proper assignement *)
+      (* safeguard for proper assignment *)
       if not (is_lvalue left) then
          raise(TypeError "assignment destination must be an lvalue");
       let t_left = check_expr table return_type left in

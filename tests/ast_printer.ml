@@ -25,6 +25,7 @@ let rec string_of_typ = function
   | TPointer t -> "^" ^ string_of_typ t
   | TArray (None,   t) -> "array[] of " ^ string_of_typ t
   | TArray (Some n, t) -> Printf.sprintf "array[%d] of %s" n (string_of_typ t)
+  | TNil -> "nil"
 
 let rec print_expr depth e =
   let p = Printf.printf in

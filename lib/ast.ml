@@ -10,6 +10,7 @@ type typ =
   | TChar
   | TArray   of int option * typ   (* Some n = fixed size; None = open *)
   | TPointer of typ
+  | TNil
 
 (* ── Operators ── *)
 type binop =
