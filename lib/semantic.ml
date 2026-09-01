@@ -193,9 +193,16 @@ and check_arguments table return_type formals args =
 
          if mode = ByRef && not (is_lvalue argument) then
             raise(TypeError ("argument " ^parameter_name ^" must be an lvalue"));
+         
+         let types_compatible = match mode with
+         | ByValue -> is_assignment_compatible expected_type actual_type
+         | ByRef -> is_assignment_compatible 
+         (TPointer expected_type)
+         (TPointer actual_type)
+         in
 
-         if actual_type = expected_type then
-            compare expected_rest argument_rest
+         if types_compatible then
+            compare expected_rest argument_rest 
          else
             raise (TypeError ("wrong type for argument " ^parameter_name))
       
