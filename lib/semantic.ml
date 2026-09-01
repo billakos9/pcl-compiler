@@ -77,6 +77,8 @@ let rec is_complete_type typ =
    | TArray (None, _) -> false
 
    | TPointer _ -> true
+
+
 (* 
 ----------------------
 helper functions ended
@@ -252,8 +254,11 @@ and check_stmt table return_type stmt =
          raise (TypeError "new requires an lvalue");
       
       let t = check_expr table return_type e in
-      (match t with 
-      | TPointer _ -> ()
+      (match t with
+      | TPointer target_type when is_complete_type
+      target_type -> ()
+
+      | TPointer _ -> raise (TypeError "new requires pointer to complete type")
       | _ -> raise(TypeError "new requires pointer"))
    
    | SNewArray (size, arr) ->
@@ -273,7 +278,8 @@ and check_stmt table return_type stmt =
       
       let t = check_expr table return_type e in
       (match t with
-      | TPointer _ -> ()
+      | TPointer target_type when is_complete_type target_type -> ()
+      | TPointer _ -> raise (TypeError "dispose requires pointer to complete type")
       | _ -> raise (TypeError "dispose requires pointer"))
 
    | SDisposeArray arr ->
