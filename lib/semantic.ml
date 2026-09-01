@@ -79,6 +79,14 @@ let rec is_complete_type typ =
    | TPointer _ -> true
 
 
+let is_assignment_compatible destination_type source_type =
+   match destination_type, source_type with
+   | TReal, TInteger -> true
+   | TPointer (TArray(None, destination_element)), TPointer (TArray (Some _, source_element)) -> 
+      destination_element = source_element
+   
+   | _ ->
+      destination_type = source_type && is_complete_type destination_type
 (* 
 ----------------------
 helper functions ended
@@ -205,8 +213,9 @@ and check_stmt table return_type stmt =
          raise(TypeError "assignment destination must be an lvalue");
       let t_left = check_expr table return_type left in
       let t_right = check_expr table return_type right in
-      if t_left = t_right then ()
-      else raise (TypeError "assignement type missmatch")
+      
+      if is_assignment_compatible t_left t_right then ()
+      else raise (TypeError "assignment type missmatch")
 
    | SBlock stmts ->
       (* .iter means run this function on every element of the list *)
