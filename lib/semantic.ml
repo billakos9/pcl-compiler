@@ -89,6 +89,13 @@ let is_assignment_compatible destination_type source_type =
    | TPointer _, TNil -> true
    | _ ->
       destination_type = source_type && is_complete_type destination_type
+
+
+let is_numeric = function
+      | TInteger
+      | TReal -> true
+      | _ -> false
+
 (* 
 ----------------------
 helper functions ended
@@ -131,8 +138,25 @@ let rec check_expr table return_type expr =
             | BFDiv, _, _ -> raise (TypeError "/ requires reals")
 
          (* comparisons - any matching type, returns bool *)
-            | (BEq | BNe | BLt | BGt | BLe | BGe), t1, t2 when t1 = t2 -> TBoolean
-            | (BEq | BNe | BLt | BGt | BLe | BGe), _ , _ -> raise (TypeError "comparison requires matching types")
+            (* equality between numeric types, including mixed int/real *)
+            | (BEq | BNe), t1, t2 when is_numeric t1 && is_numeric t2 ->
+               TBoolean
+            (* pointer compared with nil accepted *)
+            | (BEq | BNe), TPointer _, TNil
+            | (BEq | BNe), TNil, TPointer _ ->
+                  TBoolean
+            (* equal non-array types *)
+            | (BEq | BNe), t1, t2 when t1 = t2 ->
+               (match t1 with
+               | TArray _ -> raise (TypeError "arrays cannot be compared")
+               | _ -> TBoolean)
+            | (BEq | BNe), _, _ ->
+               raise (TypeError "invalid types for equality comparison")
+            (* ordering available for numeric operands *)
+            | (BLt | BGt | BLe | BGe), t1, t2 when is_numeric t1 && is_numeric t2 ->
+               TBoolean
+            | (BLt | BGt | BLe | BGe), _, _ ->
+               raise(TypeError "ordering comparison requires numeric operands")
 
          (* logical *)
             | (BAnd | BOr), TBoolean, TBoolean -> TBoolean
