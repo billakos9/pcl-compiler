@@ -374,3 +374,10 @@ and check_body table return_type body =
    in
    List.iter(check_stmt table_with_locals return_type)
    body.block
+
+
+
+(* entry point *)
+let check_program program =
+   let table = enter_scope empty_table in
+   check_body table None program.body
