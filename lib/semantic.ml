@@ -165,7 +165,11 @@ let rec check_expr table return_type expr =
             | (BAnd | BOr), TBoolean, TBoolean -> TBoolean
             | (BAnd | BOr), _, _ -> raise (TypeError "and/or requires booleans")
          )
-      | EString _ -> TArray(None, TChar)
+
+      (* string literals = fixed arrays
+      length = #Chars + \0 *)
+      | EString value -> TArray(Some (String.length value + 1), TChar)
+
       | ECall (name, args) ->
          ( match lookup table name with
             | None -> raise (TypeError ("undefined function: " ^ name))
