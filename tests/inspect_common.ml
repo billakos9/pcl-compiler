@@ -27,7 +27,7 @@ let run inspector_name action =
       let ast = parse_file filename in
       action ast
     with
-    | Lexer.LexicalError message -
+    | Lexer.LexicalError message ->
       Printf.eprintf "Lexical Error: %s\n" message;
       exit 1
    | Parser.Error ->
