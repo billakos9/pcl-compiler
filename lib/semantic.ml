@@ -96,6 +96,15 @@ let is_numeric = function
       | TReal -> true
       | _ -> false
 
+
+let add_predefined table =
+   List.fold_left
+      (fun current_table header ->
+         let name, info = symbol_from_header header in
+         add_symbol current_table name info)
+      table
+      Pcl_library.predefined_headers
+
 (* 
 ----------------------
 helper functions ended
@@ -379,5 +388,8 @@ and check_body table return_type body =
 
 (* entry point *)
 let check_program program =
-   let table = enter_scope empty_table in
-   check_body table None program.body
+   let builtins_table =
+      add_predefined (enter_scope empty_table)
+   in
+   let program_table = enter_scope builtins_table in
+   check_body program_table None program.body
