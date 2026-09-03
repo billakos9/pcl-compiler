@@ -36,6 +36,9 @@ let run inspector_name action =
    | Semantic.TypeError message ->
       Printf.eprintf "Semantic error: %s\n" message;
       exit 1
+   | Codegen.CodegenError message ->
+      Printf.eprintf "Code generation error: %s\n" message;
+      exit 1
    | Sys_error message ->
       Printf.eprintf "File error: %s\n" message;
       exit 1
