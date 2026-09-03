@@ -12,3 +12,8 @@
  (name semantic_inspect)
  (modules semantic_inspect)
  (libraries pcl_compiler))
+
+(executable
+ (name codegen_inspect)
+ (modules codegen_inspect)
+ (libraries pcl_compiler))
