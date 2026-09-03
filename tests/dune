@@ -7,3 +7,8 @@
  (name parser_inspect)
  (modules parser_inspect ast_printer)
  (libraries pcl_compiler))
+
+(executable
+ (name semantic_inspect)
+ (modules semantic_inspect)
+ (libraries pcl_compiler))
