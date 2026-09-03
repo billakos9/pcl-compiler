@@ -1,6 +1,6 @@
 open Pcl_compiler
 
-(* ── Phase 1: Parser ─────────────────────────────────────────────── *)
+(* ── Phase 1: Lexer & Parser ─────────────────────────────────────────────── *)
 let run_parser lexbuf =
   try
     Parser.program
@@ -14,8 +14,14 @@ let run_parser lexbuf =
       Printf.eprintf "Syntax error\n"; 
       exit 1
 
-(* ── Phase 3: Semantic analysis – TODO ─────────────────────────── *)
-(* let run_semantic _ast = () *)
+(* ── Phase 2: Semantic analysis – TODO ─────────────────────────── *)
+  let run_semantic ast =
+    try
+      Semantic.check_program ast
+    with
+    | Semantic.TypeError message ->
+      Printf.eprintf "Semantic error: %s\n" message;
+      exit 1 
 
 (* ── Phase 4: Code generation – TODO ───────────────────────────── *)
 (* let run_codegen _ast = () *)
@@ -33,7 +39,8 @@ let () =
 
   let channel = open_in filename in
   let lexbuf = Lexing.from_channel channel in
-  let _ast = run_parser lexbuf in
+  let ast = run_parser lexbuf in
   
   close_in channel;
-  Printf.printf "Parsing OK\n"
+  run_semantic ast;
+  Printf.printf "Semantic Analysis OK\n"
