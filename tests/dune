@@ -1,3 +1,9 @@
+(library
+ (name inspect_support)
+ (wrapped false)
+ (modules inspect_common)
+ (libraries pcl_compiler))
+
 (executable
  (name lexer_inspect)
  (modules lexer_inspect)
@@ -6,14 +12,14 @@
 (executable
  (name parser_inspect)
  (modules parser_inspect ast_printer)
- (libraries pcl_compiler))
+ (libraries pcl_compiler inspect_support))
 
 (executable
  (name semantic_inspect)
  (modules semantic_inspect)
- (libraries pcl_compiler))
+ (libraries pcl_compiler inspect_support))
 
 (executable
  (name codegen_inspect)
  (modules codegen_inspect)
- (libraries pcl_compiler))
+ (libraries pcl_compiler inspect_support))
