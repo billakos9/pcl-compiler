@@ -7,6 +7,29 @@ open Ast
 
 exception CodegenError of string
 
+(* context *)
+
+type generation_context = {
+   globals : Buffer.t;
+   instructions : Buffer.t;
+   mutable next_string_id : int;
+}
+
+
+let create_context () =
+   {
+      globals = Buffer.create 256;
+      instructions = Buffer.create 256;
+      next_string_id = 0;
+   }
+
+
+let fresh_string_id context =
+   let id = context.next_string_id in
+   context.next_string_id <- id + 1;
+   id
+
+
 (* Helper functions *)
 
 let emit_line buffer line =
