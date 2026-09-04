@@ -58,6 +58,23 @@ let llvm_escape_string value =
    Buffer.add_string escaped "\\00";
    Buffer.contents escaped
 
+
+
+let generate_string_constant context value =
+   let id = fresh_string_id context in
+   let global_name = Printf.sprintf ".str.%d" id in
+   let length = String.length value + 1 in
+   let escaped = llvm_escape_string value in
+
+   let declaration = 
+      Printf.sprintf "@%s = private unnamed_addr constant [%d x i8] c\"%s\""
+      global_name length escaped in
+
+      emit_line context.globals declaration;
+      (global_name, length)
+
+
+
 let generate_stmt output stmt =
    match stmt with
    | SEmpty -> ()
