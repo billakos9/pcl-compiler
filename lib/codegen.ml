@@ -75,28 +75,36 @@ let generate_string_constant context value =
 
 
 
-let generate_stmt output stmt =
+let generate_stmt context stmt =
    match stmt with
    | SEmpty -> ()
 
    | SCall ("writeInteger", [EInt value]) ->
       let instruction =
          Printf.sprintf " call void @writeInteger(i64 %d)" value in
-      emit_line output instruction
+      emit_line context.instructions instruction
 
    | _ -> raise (CodegenError "statement not supported by code generation yet")
 
 (* Helper functions end *)
 
+
 let generate_program (program: program) =
+
+   let context = create_context () in
+   
+   List.iter (generate_stmt context) program.body.block;
+   
    let output = Buffer.create 256 in
 
    emit_line output "declare void @writeInteger(i64)";
+
+   Buffer.add_buffer output context.globals;
+
    emit_line output "define i32 @main() {";
    emit_line output "entry:";
 
-   List.iter (generate_stmt output) program.body.block;
-
+   Buffer.add_buffer output context.instructions;
 
    emit_line output " ret i32 0";
    emit_line output "}";
