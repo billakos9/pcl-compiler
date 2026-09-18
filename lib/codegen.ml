@@ -15,7 +15,6 @@ type generation_context = {
    mutable next_string_id : int;
 }
 
-
 let create_context () =
    {
       globals = Buffer.create 256;
@@ -29,6 +28,11 @@ let fresh_string_id context =
    context.next_string_id <- id + 1;
    id
 
+
+type generated_value = {
+   pcl_type: typ;
+   operand: string;
+}
 
 (* Helper functions *)
 
@@ -75,16 +79,43 @@ let generate_string_constant context value =
 
 
 
+let generate_expr _context expr =
+   match expr with
+   | EInt value ->
+      {
+         pcl_type = TInteger;
+         operand = string_of_int value
+      }
+   
+   | _ ->
+      raise(CodegenError "expression not supported by code generation yet")
+
+
+
 let generate_stmt context stmt =
    match stmt with
    | SEmpty -> ()
 
-   | SCall ("writeInteger", [EInt value]) ->
-      let instruction =
-         Printf.sprintf " call void @writeInteger(i64 %d)" value in
+   | SCall ("writeInteger", [argument]) ->
+      let generated_argument = generate_expr context argument
+      in
+      if generated_argument.pcl_type <>TInteger then
+         raise(CodegenError "writeInteger requires an integer");
+
+      let instruction = Printf.sprintf " call void @writeInteger(i64 %s)" generated_argument.operand 
+      in
+      emit_line context.instructions instruction
+
+   | SCall ("writeString", [EString value]) ->
+      let global_name, length = generate_string_constant context value
+      in
+      let instruction = Printf.sprintf "call void @writeString(ptr getelementptr inbounds ([%d x i8], ptr @%s, i64 0, i64 0))" length global_name
+      in
       emit_line context.instructions instruction
 
    | _ -> raise (CodegenError "statement not supported by code generation yet")
+
+
 
 (* Helper functions end *)
 
@@ -98,15 +129,15 @@ let generate_program (program: program) =
    let output = Buffer.create 256 in
 
    emit_line output "declare void @writeInteger(i64)";
-
+   emit_line output "declare void @writeString(ptr)";
    Buffer.add_buffer output context.globals;
+
 
    emit_line output "define i32 @main() {";
    emit_line output "entry:";
-
    Buffer.add_buffer output context.instructions;
+
 
    emit_line output " ret i32 0";
    emit_line output "}";
-
    Buffer.contents output
