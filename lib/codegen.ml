@@ -99,9 +99,6 @@ let generate_stmt context stmt =
    | SCall ("writeInteger", [argument]) ->
       let generated_argument = generate_expr context argument
       in
-      if generated_argument.pcl_type <>TInteger then
-         raise(CodegenError "writeInteger requires an integer");
-
       let instruction = Printf.sprintf " call void @writeInteger(i64 %s)" generated_argument.operand 
       in
       emit_line context.instructions instruction
