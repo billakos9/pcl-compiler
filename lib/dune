@@ -1,6 +1,8 @@
 (library
  (name pcl_compiler)
- (modules lexer ast parser symbol pcl_library semantic codegen))
+ (modules lexer ast 
+ typed_ast parser symbol 
+ pcl_library semantic codegen))
 
 ; Phase 1 – Lexer
 (ocamllex lexer)
