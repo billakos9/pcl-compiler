@@ -45,5 +45,36 @@ and expr_node =
   | TEIntToReal of expr
 
 
+type stmt =
+  | TSEmpty
+  | TSAssign of expr * expr
+  | TSBlock of stmt list
+  | TSCall of string * expr list
+  | TSIf of expr * stmt * stmt option
+  | TSWhile of expr * stmt
+  | TSLabel of string * stmt
+  | TSGoto of string
+  | TSReturn
+  | TSNew of expr
+  | TSNewArray of expr * expr
+  | TSDispose of expr
+  | TSDisposeArray of expr
+
+
+type local =
+  | TLVar of (string list * Ast.typ) list
+  | TLLabel of string list
+  | TLDef of Ast.header * body
+  | TLForward of Ast.header
+
+and body = {
+  locals : local list;
+  block : stmt list;
+}
+
+type program = {
+  name : string;
+  body : body;
+}
 
 
