@@ -81,8 +81,8 @@ let generate_string_constant context value =
 
 
 
-let generate_expr _context expression =
-   match expression with
+let generate_expr _context (expression : Typed_ast.expr) =
+   match expression.node with
    | TEInt value ->
       {
          pcl_type = expression.pcl_type;
@@ -95,7 +95,7 @@ let generate_expr _context expression =
 
 
 let generate_stmt context statement =
-   match statemenst with
+   match statement with
    | TSEmpty -> ()
 
    | TSCall ("writeInteger", [argument]) ->
