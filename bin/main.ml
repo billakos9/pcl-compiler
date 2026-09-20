@@ -17,7 +17,7 @@ let run_parser lexbuf =
 (* ── Phase 2: Semantic analysis – TODO ─────────────────────────── *)
   let run_semantic ast =
     try
-      Semantic.check_program ast
+      Semantic.analyze_program ast
     with
     | Semantic.TypeError message ->
       Printf.eprintf "Semantic error: %s\n" message;
@@ -42,5 +42,5 @@ let () =
   let ast = run_parser lexbuf in
   
   close_in channel;
-  run_semantic ast;
+  ignore(run_semantic ast);
   Printf.printf "Semantic Analysis OK\n"

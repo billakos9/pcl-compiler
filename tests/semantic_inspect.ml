@@ -1,7 +1,7 @@
 open Pcl_compiler
 
 let inspect ast =
-   Semantic.check_program ast;
+   ignore(Semantic.analyze_program ast);
    Printf.printf "Semantic Analysis OK\n"
 
 let () =
