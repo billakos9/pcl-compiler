@@ -4,6 +4,8 @@
    ========================================================= *)
 
 open Ast
+open Typed_ast
+
 
 exception CodegenError of string
 
@@ -79,12 +81,12 @@ let generate_string_constant context value =
 
 
 
-let generate_expr _context expr =
-   match expr with
-   | EInt value ->
+let generate_expr _context expression =
+   match expression with
+   | TEInt value ->
       {
-         pcl_type = TInteger;
-         operand = string_of_int value
+         pcl_type = expression.pcl_type;
+         operand = string_of_int value;
       }
    
    | _ ->
@@ -92,32 +94,39 @@ let generate_expr _context expr =
 
 
 
-let generate_stmt context stmt =
-   match stmt with
-   | SEmpty -> ()
+let generate_stmt context statement =
+   match statemenst with
+   | TSEmpty -> ()
 
-   | SCall ("writeInteger", [argument]) ->
+   | TSCall ("writeInteger", [argument]) ->
       let generated_argument = generate_expr context argument
       in
       let instruction = Printf.sprintf " call void @writeInteger(i64 %s)" generated_argument.operand 
       in
       emit_line context.instructions instruction
 
-   | SCall ("writeString", [EString value]) ->
-      let global_name, length = generate_string_constant context value
-      in
-      let instruction = Printf.sprintf "call void @writeString(ptr getelementptr inbounds ([%d x i8], ptr @%s, i64 0, i64 0))" length global_name
-      in
-      emit_line context.instructions instruction
+   | TSCall ("writeString", [argument]) ->
+      (match argument.node with
+      | TEString value ->
+         let global_name, length = generate_string_constant context value
+         in
+         let instruction = Printf.sprintf "call void @writeString(ptr getelementptr inbounds ([%d x i8], ptr @%s, i64 0, i64 0))" length global_name
+         in
+         emit_line context.instructions instruction
+      
+      | _ ->
+         raise(CodegenError "writeString currently support only string literals"))
 
-   | _ -> raise (CodegenError "statement not supported by code generation yet")
+      | _ ->
+         raise(CodegenError "statement not supported by code generation yet")
+
 
 
 
 (* Helper functions end *)
 
 
-let generate_program (program: program) =
+let generate_program (program: Typed_ast.program) =
 
    let context = create_context () in
    
