@@ -37,6 +37,18 @@ type generated_value = {
 }
 
 (* Helper functions *)
+let rec llvm_type = function
+   | TInteger -> "i64"
+   | TReal -> "double"
+   | TBoolean -> "i1"
+   | TChar -> "i8"
+   | TPointer _ -> "ptr"
+   | TArray (Some size, element_type) ->
+      Printf.sprintf "[%d x %s]" size(llvm_type element_type)
+   | TArray(None, _) ->
+      "ptr"
+   | TNil -> "ptr"
+
 
 let emit_line buffer line =
    Buffer.add_string buffer line;
@@ -81,7 +93,7 @@ let generate_string_constant context value =
 
 
 
-let generate_expr _context (expression : Typed_ast.expr) =
+let generate_expr context (expression : Typed_ast.expr) =
    match expression.node with
    | TEInt value ->
       {
@@ -89,6 +101,41 @@ let generate_expr _context (expression : Typed_ast.expr) =
          operand = string_of_int value;
       }
    
+   | TEReal value ->
+      {
+         pcl_type = expression.pcl_type;
+         operand = Printf.sprintf "%.17e" value;
+      }
+
+   | TEBool value ->
+      {
+         pcl_type = expression.pcl_type;
+         operand = if value then "1" else "0";
+      }
+
+   | TEChar value ->
+      {
+         pcl_type = expression.pcl_type;
+         operand = string_of_int (Char.code value);
+      }
+
+   | TENil ->
+      {
+         pcl_type = expression.pcl_type;
+         operand = "null";
+      }
+
+   | TEString value ->
+      let global_name, length =
+      generate_string_constant context value
+      in
+      {
+         pcl_type = expression.pcl_type;
+         operand = Printf.sprintf 
+         "getelementptr inbounds ([%d x i8], ptr @%s, i64 0, i64 0)"
+         length global_name;
+      }
+      
    | _ ->
       raise(CodegenError "expression not supported by code generation yet")
 
@@ -101,28 +148,25 @@ let generate_stmt context statement =
    | TSCall ("writeInteger", [argument]) ->
       let generated_argument = generate_expr context argument
       in
-      let instruction = Printf.sprintf " call void @writeInteger(i64 %s)" generated_argument.operand 
+      let argument_type =
+         llvm_type generated_argument.pcl_type
+      in
+      let instruction = Printf.sprintf " call void @writeInteger(%s %s)" argument_type generated_argument.operand 
       in
       emit_line context.instructions instruction
 
    | TSCall ("writeString", [argument]) ->
-      (match argument.node with
-      | TEString value ->
-         let global_name, length = generate_string_constant context value
-         in
-         let instruction = Printf.sprintf "call void @writeString(ptr getelementptr inbounds ([%d x i8], ptr @%s, i64 0, i64 0))" length global_name
-         in
-         emit_line context.instructions instruction
+      let generated_argument = generate_expr context argument
+      in
+      let instruction =
+         Printf.sprintf "call void @writeString(ptr %s)" generated_argument.operand
+      in
+      emit_line context.instructions instruction
+
+   | _ ->
+      raise(CodegenError "statement not supported by code generation yet")
+
       
-      | _ ->
-         raise(CodegenError "writeString currently support only string literals"))
-
-      | _ ->
-         raise(CodegenError "statement not supported by code generation yet")
-
-
-
-
 (* Helper functions end *)
 
 
