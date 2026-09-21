@@ -23,6 +23,7 @@ type generation_context = {
    mutable next_temp_id : int;
    mutable variables : (string * variable_storage) list;
    mutable next_label_id : int;
+   mutable current_block : string;
 }
 
 
@@ -34,6 +35,7 @@ let create_context () =
       next_temp_id = 0;
       variables = [];
       next_label_id = 0;
+      current_block = "entry";
    }
 
 
@@ -88,6 +90,11 @@ let emit_line buffer line =
    Buffer.add_char buffer '\n'
 
 
+let emit_label context label =
+   emit_line context.instructions (label ^ ":");
+   context.current_block <- label
+
+
 let declare_variable context name variable_type =
    let address = fresh_temp context
    in
@@ -132,7 +139,7 @@ let llvm_escape_string value =
          else
             Printf.bprintf escaped "\\%02X" code)
       value;
-   
+
    Buffer.add_string escaped "\\00";
    Buffer.contents escaped
 
@@ -321,16 +328,113 @@ let rec generate_expr context (expression : Typed_ast.expr) =
       | _ ->
          raise(CodegenError "unary operator not supported yet"))
 
+   | TEBinop (BAnd, left, right) ->
+      let generated_left =
+         generate_expr context left
+      in
+      let left_block =
+         context.current_block
+      in
+      let right_label =
+         fresh_label context "and_right_"
+      in
+      let end_label =
+         fresh_label context "and_end_"
+      in
+      emit_line context.instructions
+         (Printf.sprintf
+            "br i1 %s, label %%%s, label %%%s"
+            generated_left.operand
+            right_label
+            end_label);
+
+      emit_label context right_label;
+
+      let generated_right = 
+         generate_expr context right
+      in
+      let right_block =
+         context.current_block
+      in
+      emit_line context.instructions
+         (Printf.sprintf "br label %%%s" end_label);
+
+      emit_label context end_label;
+      let result =
+         fresh_temp context
+      in
+      emit_line context.instructions
+         (Printf.sprintf
+            "%s = phi i1 [ 0, %%%s ], [ %s, %%%s ]"
+            result
+            left_block
+            generated_right.operand
+            right_block);
+
+      {
+         pcl_type = expression.pcl_type;
+         operand = result;
+      }
+
+   | TEBinop (BOr, left, right) ->
+      let generated_left =
+         generate_expr context left
+      in
+      let left_block =
+         context.current_block
+      in
+      let right_label =
+         fresh_label context "or_right_"
+      in
+      let end_label =
+         fresh_label context "or_end_"
+      in
+      emit_line context.instructions
+         (Printf.sprintf
+            "br i1 %s, label %%%s, label %%%s"
+            generated_left.operand
+            end_label
+            right_label);
+
+      emit_label context right_label;
+
+      let generated_right =
+         generate_expr context right
+      in
+      let right_block =
+         context.current_block
+      in
+      emit_line context.instructions
+         (Printf.sprintf "br label %%%s" end_label);
+
+      emit_label context end_label;
+      let result =
+         fresh_temp context
+      in
+      emit_line context.instructions
+         (Printf.sprintf
+            "%s = phi i1 [ 1, %%%s ], [ %s, %%%s ]"
+            result
+            left_block
+            generated_right.operand
+            right_block);
+
+      {
+         pcl_type = expression.pcl_type;
+         operand = result;
+      }
+
    | TEBinop (operator, left, right) ->
       let generated_left =
          generate_expr context left
       in
-      let generated_right = 
+      let generated_right =
          generate_expr context right
       in
       let result =
          fresh_temp context
       in
+
       let instruction =
          match operator with
          | BEq | BNe | BLt | BGt | BLe | BGe ->
@@ -400,6 +504,171 @@ let rec generate_expr context (expression : Typed_ast.expr) =
             pcl_type = expression.pcl_type;
             operand = result;
          }
+
+   | TECall ("readInteger", []) ->
+      let result =
+         fresh_temp context
+      in
+      emit_line context.instructions
+         (Printf.sprintf "%s = call i64 @readInteger()" result);
+      {
+         pcl_type = expression.pcl_type;
+         operand = result;
+      }
+
+   | TECall ("readBoolean", []) ->
+      let runtime_result =
+         fresh_temp context
+      in
+      emit_line context.instructions
+         (Printf.sprintf "%s = call i8 @readBoolean()" runtime_result);
+
+      let result =
+         fresh_temp context
+      in
+      emit_line context.instructions
+         (Printf.sprintf "%s = trunc i8 %s to i1" result runtime_result);
+      {
+         pcl_type = expression.pcl_type;
+         operand = result;
+      }
+
+   | TECall ("readChar", []) ->
+      let result =
+         fresh_temp context
+      in
+      emit_line context.instructions
+         (Printf.sprintf "%s = call i8 @readChar()" result);
+      {
+         pcl_type = expression.pcl_type;
+         operand = result;
+      }
+
+   | TECall ("abs", [argument]) ->
+      let generated_argument =
+         generate_expr context argument
+      in
+      let result =
+         fresh_temp context
+      in
+      emit_line context.instructions
+         (Printf.sprintf
+            "%s = call i64 @labs(i64 %s)"
+            result
+            generated_argument.operand);
+      {
+         pcl_type = expression.pcl_type;
+         operand = result;
+      }
+
+   | TECall
+        (("fabs" | "sqrt" | "sin" | "cos" | "tan" | "arctan" | "exp" | "ln" as name),
+         [argument]) ->
+      let generated_argument =
+         generate_expr context argument
+      in
+      let runtime_name =
+         match name with
+         | "arctan" -> "atan"
+         | "ln" -> "log"
+         | _ -> name
+      in
+      let result =
+         fresh_temp context
+      in
+      emit_line context.instructions
+         (Printf.sprintf
+            "%s = call double @%s(double %s)"
+            result
+            runtime_name
+            generated_argument.operand);
+      {
+         pcl_type = expression.pcl_type;
+         operand = result;
+      }
+
+   | TECall ("pi", []) ->
+      {
+         pcl_type = expression.pcl_type;
+         operand = "3.14159265358979312e+00";
+      }
+
+   | TECall ("trunc", [argument]) ->
+      let generated_argument =
+         generate_expr context argument
+      in
+      let result =
+         fresh_temp context
+      in
+      emit_line context.instructions
+         (Printf.sprintf
+            "%s = fptosi double %s to i64"
+            result
+            generated_argument.operand);
+      {
+         pcl_type = expression.pcl_type;
+         operand = result;
+      }
+
+   | TECall ("round", [argument]) ->
+      let generated_argument =
+         generate_expr context argument
+      in
+      let rounded =
+         fresh_temp context
+      in
+      emit_line context.instructions
+         (Printf.sprintf
+            "%s = call double @round(double %s)"
+            rounded
+            generated_argument.operand);
+
+      let result =
+         fresh_temp context
+      in
+      emit_line context.instructions
+         (Printf.sprintf
+            "%s = fptosi double %s to i64"
+            result
+            rounded);
+      {
+         pcl_type = expression.pcl_type;
+         operand = result;
+      }
+
+   | TECall ("ord", [argument]) ->
+      let generated_argument =
+         generate_expr context argument
+      in
+      let result =
+         fresh_temp context
+      in
+      emit_line context.instructions
+         (Printf.sprintf
+            "%s = zext i8 %s to i64"
+            result
+            generated_argument.operand);
+      {
+         pcl_type = expression.pcl_type;
+         operand = result;
+      }
+
+   | TECall ("chr", [argument]) ->
+      let generated_argument =
+         generate_expr context argument
+      in
+      let result =
+         fresh_temp context
+      in
+      emit_line context.instructions
+         (Printf.sprintf
+            "%s = trunc i64 %s to i8"
+            result
+            generated_argument.operand);
+      {
+         pcl_type = expression.pcl_type;
+         operand = result;
+      }
       
    | _ ->
       raise(CodegenError "expression not supported by code generation yet")
@@ -496,12 +765,12 @@ let rec generate_stmt context statement =
             then_label
             else_label);
 
-      emit_line context.instructions (then_label ^ ":");
+      emit_label context then_label;
       generate_stmt context then_statement;
       emit_line context.instructions
          (Printf.sprintf "br label %%%s" end_label);
 
-      emit_line context.instructions (else_label ^ ":");
+      emit_label context else_label;
       (match else_statement with
       | None -> ()
       | Some statement ->
@@ -509,7 +778,7 @@ let rec generate_stmt context statement =
       emit_line context.instructions
          (Printf.sprintf "br label %%%s" end_label);
 
-      emit_line context.instructions (end_label ^ ":")
+      emit_label context end_label
 
    | TSWhile (condition, body) ->
       let condition_label =
@@ -527,8 +796,7 @@ let rec generate_stmt context statement =
             "br label %%%s"
             condition_label);
 
-      emit_line context.instructions
-         (condition_label ^ ":");
+      emit_label context condition_label;
 
       let generated_condition =
          generate_expr context condition
@@ -541,8 +809,7 @@ let rec generate_stmt context statement =
             body_label
             end_label);
 
-      emit_line context.instructions
-         (body_label ^ ":");
+      emit_label context body_label;
 
       generate_stmt context body;
 
@@ -551,8 +818,7 @@ let rec generate_stmt context statement =
             "br label %%%s"
             condition_label);
 
-      emit_line context.instructions
-         (end_label ^ ":")
+      emit_label context end_label
 
    | _ ->
       raise(CodegenError "statement not supported by code generation yet")
@@ -591,6 +857,19 @@ let generate_program (program: Typed_ast.program) =
    emit_line output "declare void @writeString(ptr)";
    emit_line output "declare void @writeBoolean(i8)";
    emit_line output "declare void @writeChar(i8)";
+   emit_line output "declare i64 @readInteger()";
+   emit_line output "declare i8 @readBoolean()";
+   emit_line output "declare i8 @readChar()";
+   emit_line output "declare i64 @labs(i64)";
+   emit_line output "declare double @fabs(double)";
+   emit_line output "declare double @sqrt(double)";
+   emit_line output "declare double @sin(double)";
+   emit_line output "declare double @cos(double)";
+   emit_line output "declare double @tan(double)";
+   emit_line output "declare double @atan(double)";
+   emit_line output "declare double @exp(double)";
+   emit_line output "declare double @log(double)";
+   emit_line output "declare double @round(double)";
    Buffer.add_buffer output context.globals;
 
 

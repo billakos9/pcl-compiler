@@ -1,0 +1,13 @@
+program codegen_read_scalar;
+
+var flag : boolean;
+var character : char;
+
+begin
+   flag := readBoolean();
+   character := readChar();
+   writeBoolean(flag);
+   writeChar(' ');
+   writeChar(character);
+   writeChar('\n')
+end.
