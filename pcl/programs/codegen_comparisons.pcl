@@ -1,0 +1,21 @@
+program codegen_comparisons;
+
+begin
+   writeBoolean(2 < 3);
+   writeChar('\n');
+
+   writeBoolean(5 = 5);
+   writeChar('\n');
+
+   writeBoolean(2.5 >= 3.0);
+   writeChar('\n');
+
+   writeBoolean(2 = 2.0);
+   writeChar('\n');
+
+   writeBoolean('a' <> 'b');
+   writeChar('\n');
+
+   writeBoolean(true = not false);
+   writeChar('\n')
+end.

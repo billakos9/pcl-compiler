@@ -161,6 +161,58 @@ let arithmetic_opcode operator operand_type =
    | _ ->
       raise (CodegenError "binary operator not supported by code generation yet")
 
+   
+let comparison_opcode operator operand_type =
+   match operand_type with
+   | TReal ->
+      let predicate =
+         match operator with
+         | BEq -> "oeq"
+         | BNe -> "une"
+         | BLt -> "olt"
+         | BGt -> "ogt"
+         | BLe -> "ole"
+         | BGe -> "oge"
+         | _ ->
+            raise
+               (CodegenError "invalid real comparison")
+      in
+      "fcmp", predicate
+
+   | TInteger ->
+      let predicate =
+         match operator with
+         | BEq -> "eq"
+         | BNe -> "ne"
+         | BLt -> "slt"
+         | BGt -> "sgt"
+         | BLe -> "sle"
+         | BGe -> "sge"
+         | _ ->
+            raise
+               (CodegenError "invalid integer comparison")
+      in
+      "icmp", predicate
+
+   | TBoolean
+   | TChar
+   | TPointer _
+   | TNil ->
+      let predicate =
+         match operator with
+         | BEq -> "eq"
+         | BNe -> "ne"
+         | _ ->
+            raise
+               (CodegenError
+                  "this type supports only equality comparisons")
+      in
+      "icmp", predicate
+
+   | TArray _ ->
+      raise
+         (CodegenError "arrays cannot be compared")
+
 
 let rec generate_expr context (expression : Typed_ast.expr) =
    match expression.node with
@@ -205,6 +257,62 @@ let rec generate_expr context (expression : Typed_ast.expr) =
          length global_name;
       }
    
+   | TEUnop (operator, operand) ->
+      let generated_operand =
+         generate_expr context operand
+      in
+      (match operator, generated_operand.pcl_type with
+      | UPlus, (TInteger | TReal) ->
+         generated_operand
+      
+      | UMinus, TInteger ->
+         let result =
+            fresh_temp context 
+         in
+         let instruction =
+            Printf.sprintf "%s = sub i64 0, %s" 
+            result
+            generated_operand.operand
+         in
+         emit_line context.instructions instruction;
+         {
+            pcl_type = expression.pcl_type;
+            operand= result;
+         }
+
+      | UMinus, TReal ->
+         let result =
+            fresh_temp context 
+         in
+         let instruction =
+            Printf.sprintf "%s = fneg double %s"
+            result
+            generated_operand.operand
+         in
+         emit_line context.instructions instruction;
+         {
+            pcl_type = expression.pcl_type;
+            operand = result;
+         }
+      
+      | UNot, TBoolean ->
+         let result = 
+            fresh_temp context
+         in
+         let instruction =
+            Printf.sprintf "%s = xor i1 %s, 1"
+            result
+            generated_operand.operand
+         in
+         emit_line context.instructions instruction;
+         {
+            pcl_type = expression.pcl_type;
+            operand = result;
+         }
+
+      | _ ->
+         raise(CodegenError "unary operator not supported yet"))
+
    | TEBinop (operator, left, right) ->
       let generated_left =
          generate_expr context left
@@ -212,19 +320,36 @@ let rec generate_expr context (expression : Typed_ast.expr) =
       let generated_right = 
          generate_expr context right
       in
-      let opcode =
-         arithmetic_opcode operator generated_left.pcl_type
-      in
       let result =
          fresh_temp context
       in
-      let instruction = 
-         Printf.sprintf "%s = %s %s %s, %s"
+      let instruction =
+         match operator with
+         | BEq | BNe | BLt | BGt | BLe | BGe ->
+            let comparison, predicate =
+               comparison_opcode operator generated_left.pcl_type
+            in
+            Printf.sprintf
+               "%s = %s %s %s %s, %s"
+               result
+               comparison
+               predicate
+               (llvm_type generated_left.pcl_type)
+               generated_left.operand
+               generated_right.operand
+   
+   | _ ->
+      let opcode =
+         arithmetic_opcode operator generated_left.pcl_type
+      in
+      Printf.sprintf
+         "%s = %s %s %s, %s"
          result
          opcode
          (llvm_type generated_left.pcl_type)
          generated_left.operand
          generated_right.operand
+
       in
       emit_line context.instructions instruction;
       {
@@ -291,7 +416,7 @@ let generate_stmt context statement =
          destination_storage.address
       in
       emit_line context.instructions instruction
-      
+
 
    | TSCall ("writeInteger", [argument]) ->
       let generated_argument = generate_expr context argument
@@ -308,6 +433,39 @@ let generate_stmt context statement =
       in
       let instruction =
          Printf.sprintf "call void @writeString(ptr %s)" generated_argument.operand
+      in
+      emit_line context.instructions instruction
+
+   | TSCall ("writeBoolean", [argument]) ->
+      let generated_argument =
+         generate_expr context argument
+      in
+      let extended_argument =
+         fresh_temp context
+      in
+      let extension =
+         Printf.sprintf
+            "%s = zext i1 %s to i8"
+            extended_argument
+            generated_argument.operand
+      in
+      emit_line context.instructions extension;
+
+      let instruction =
+         Printf.sprintf
+            "call void @writeBoolean(i8 %s)"
+            extended_argument
+      in
+      emit_line context.instructions instruction
+   
+   | TSCall ("writeChar", [argument]) ->
+      let generated_argument =
+         generate_expr context argument
+      in
+      let instruction =
+         Printf.sprintf
+            "call void @writeChar(i8 %s)"
+            generated_argument.operand
       in
       emit_line context.instructions instruction
 
@@ -346,6 +504,8 @@ let generate_program (program: Typed_ast.program) =
 
    emit_line output "declare void @writeInteger(i64)";
    emit_line output "declare void @writeString(ptr)";
+   emit_line output "declare void @writeBoolean(i8)";
+   emit_line output "declare void @writeChar(i8)";
    Buffer.add_buffer output context.globals;
 
 
