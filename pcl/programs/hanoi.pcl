@@ -23,8 +23,8 @@ program hanoi;
    end;
 
 begin
-   writeString("Please, give the number of rings: ");
+   writeString("Please, give me the number of rings: ");
    numberOfRings := readInteger();
-   writeString("\nHere is the solution :\n\n");
+   writeString("\nHere is the solution:\n\n");
    hanoi("left", "right", "middle", numberOfRings)
 end.

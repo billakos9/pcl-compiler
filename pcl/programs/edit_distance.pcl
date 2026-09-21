@@ -8,7 +8,8 @@ program edit_distance;
 
 	var n,m,i,j	: integer;
 	var s1, s2	: array [256] of char;
-	var dist 	: array of integer;
+	var dist 	: ^array of integer;
+	var cost, width : integer;
 
 	function strlen	(var s : array of char) : integer;
 	begin
@@ -28,9 +29,9 @@ begin
 	writeString("Calculate the minimum distance of two words! :)\n");	
 	writeString("Maximum supported string length is 256, please no more!\n");
 
-	writeString("\nEnter the first string:\n");
+	writeString("\nEnter the first string: ");
 	readString(256, s1);
-	writeString("\nEnter the second string:\n");
+	writeString("\nEnter the second string: ");
 	readString(256, s2);
 
 	n := strlen(s1);
@@ -42,17 +43,19 @@ begin
 
 	(* edge cases, one string is empty, difference is length of other string *)
 
+	width := m + 1;
+
 	i := 0;
 	while (i <= n) do
 	begin
-		dist[i*m] := i;
+		dist^[i * width] := i;
 		i := i + 1
 	end;
 
 	j := 0;
 	while (j <= m) do
 	begin
-		dist[j] := j;
+		dist^[j] := j;
 		j := j + 1
 	end;
 
@@ -62,21 +65,26 @@ begin
 	while (i <= n) do
 	begin
 		j := 1;
-
 		while (j <= m) do
 		begin
-			dist[i*m + j] := min (dist[(i-1)*m + j], min (dist[i*m + (j-1)], dist[(i-1)*m + (j-1)]) );
+			(* check if characters match *)
+			if (s1[i-1] = s2[j-1]) then
+				cost := 0
+			else
+				cost := 1;
+
+			(* Calculate min of delete, insert, substitute *)
+			dist^[i*width + j] := min (dist^[(i-1)*width + j] + 1,
+						   min (dist^[i*width + (j-1)] + 1,
+						        dist^[(i-1)*width + (j-1)] + cost) );
 			j := j + 1
 		end;
-		
-		i := i + 1;		
+		i := i + 1
 	end;
 
 	writeString("\n\nEdit Distance is: ");
-	writeInteger(dist[n*m + m]);
+	writeInteger(dist^[n*width + m]);
 	writeString("\n");
 
 	dispose [] dist
-end
-.
-
+end.

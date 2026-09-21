@@ -3,7 +3,7 @@ program lis;
     var dp, P : array [1000] of integer;
     var i, j, size : integer;
 
-    function findMaxElement(sz : integer; arr : array of integer) : integer;
+    function findMaxElement(sz : integer; var arr : array of integer) : integer;
         var max : integer;
     begin 
         i := 0;
@@ -48,7 +48,7 @@ program lis;
             i := i+1
         end;
 
-        writeString("longest increasing subsequence has length: ");
+        writeString("longest increasing subsequence has length ");
         writeInteger(findMaxElement(size, dp));
         writeString("\n")
 

@@ -13,12 +13,12 @@ var valid_key : boolean;
 
 function shift(c : char; k : integer) : char;
 begin
-    if (c >= 'A') and (c <= 'Z') then
-        shift := chr(((ord(c) - ord('A') + k) mod 26) + ord('A'))
-    else if (c >= 'a') and (c <= 'z') then
-        shift := chr(((ord(c) - 32 - ord('A') + k) mod 26) + ord('A'))
+    if (ord(c) >= ord('A')) and (ord(c) <= ord('Z')) then
+        result := chr(((ord(c) - ord('A') + k) mod 26) + ord('A'))
+    else if (ord(c) >= ord('a')) and (ord(c) <= ord('z')) then
+        result := chr(((ord(c) - 32 - ord('A') + k) mod 26) + ord('A'))
     else
-        shift := c;
+        result := c
 end;
 
 begin
@@ -26,10 +26,10 @@ begin
     key := readInteger();
     writeString("\n");
 
-    if key < 1 or key > 25 then
+    if (key < 1) or (key > 25) then
     begin
         writeString("Invalid key! Key must be a number between 1 and 25!!\n");
-        valid_key := false;
+        valid_key := false
     end
     else
         valid_key := true;
@@ -45,13 +45,13 @@ begin
         begin
             ch := plaintext[i];
             ciphertext[i] := shift(ch, key);
-            i := i + 1;
+            i := i + 1
         end;
 
         ciphertext[i] := '\0';
 
         writeString("Ciphertext: ");
         writeString(ciphertext);
-        writeString("\n");
-    end;
+        writeString("\n")
+    end
 end.
