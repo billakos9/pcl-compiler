@@ -22,6 +22,7 @@ type generation_context = {
    mutable next_string_id : int;
    mutable next_temp_id : int;
    mutable variables : (string * variable_storage) list;
+   mutable next_label_id : int;
 }
 
 
@@ -32,6 +33,7 @@ let create_context () =
       next_string_id = 0;
       next_temp_id = 0;
       variables = [];
+      next_label_id = 0;
    }
 
 
@@ -45,6 +47,12 @@ let fresh_temp context =
    let id = context.next_temp_id in
    context.next_temp_id <- id +1;
    Printf.sprintf "%%tmp%d" id
+
+
+let fresh_label context prefix =
+   let id = context.next_label_id in
+   context.next_label_id <- id + 1;
+   Printf.sprintf "%s%d" prefix id
 
 
 let lookup_variable context name =
@@ -398,7 +406,7 @@ let rec generate_expr context (expression : Typed_ast.expr) =
 
 
 
-let generate_stmt context statement =
+let rec generate_stmt context statement =
    match statement with
    | TSEmpty -> ()
 
@@ -468,6 +476,83 @@ let generate_stmt context statement =
             generated_argument.operand
       in
       emit_line context.instructions instruction
+
+   | TSBlock statements ->
+      List.iter (generate_stmt context) statements
+
+   | TSIf (condition, then_statement, else_statement) ->
+      let generated_condition =
+         generate_expr context condition
+      in
+
+      let then_label = fresh_label context "if_then_" in
+      let else_label = fresh_label context "if_else_" in
+      let end_label = fresh_label context "if_end_" in
+
+      emit_line context.instructions
+         (Printf.sprintf
+            "br i1 %s, label %%%s, label %%%s"
+            generated_condition.operand
+            then_label
+            else_label);
+
+      emit_line context.instructions (then_label ^ ":");
+      generate_stmt context then_statement;
+      emit_line context.instructions
+         (Printf.sprintf "br label %%%s" end_label);
+
+      emit_line context.instructions (else_label ^ ":");
+      (match else_statement with
+      | None -> ()
+      | Some statement ->
+         generate_stmt context statement);
+      emit_line context.instructions
+         (Printf.sprintf "br label %%%s" end_label);
+
+      emit_line context.instructions (end_label ^ ":")
+
+   | TSWhile (condition, body) ->
+      let condition_label =
+         fresh_label context "while_condition_"
+      in
+      let body_label =
+         fresh_label context "while_body_"
+      in
+      let end_label =
+         fresh_label context "while_end_"
+      in
+
+      emit_line context.instructions
+         (Printf.sprintf
+            "br label %%%s"
+            condition_label);
+
+      emit_line context.instructions
+         (condition_label ^ ":");
+
+      let generated_condition =
+         generate_expr context condition
+      in
+
+      emit_line context.instructions
+         (Printf.sprintf
+            "br i1 %s, label %%%s, label %%%s"
+            generated_condition.operand
+            body_label
+            end_label);
+
+      emit_line context.instructions
+         (body_label ^ ":");
+
+      generate_stmt context body;
+
+      emit_line context.instructions
+         (Printf.sprintf
+            "br label %%%s"
+            condition_label);
+
+      emit_line context.instructions
+         (end_label ^ ":")
 
    | _ ->
       raise(CodegenError "statement not supported by code generation yet")
