@@ -15,6 +15,7 @@ type generation_context = {
    globals : Buffer.t;
    instructions : Buffer.t;
    mutable next_string_id : int;
+   mutable next_temp_id : int;
 }
 
 let create_context () =
@@ -22,6 +23,7 @@ let create_context () =
       globals = Buffer.create 256;
       instructions = Buffer.create 256;
       next_string_id = 0;
+      next_temp_id = 0;
    }
 
 
@@ -29,6 +31,12 @@ let fresh_string_id context =
    let id = context.next_string_id in
    context.next_string_id <- id + 1;
    id
+
+
+let fresh_temp context =
+   let id = context.next_temp_id in
+   context.next_temp_id <- id +1;
+   Printf.sprintf "%%tmp%d" id
 
 
 type generated_value = {
@@ -93,7 +101,24 @@ let generate_string_constant context value =
 
 
 
-let generate_expr context (expression : Typed_ast.expr) =
+let arithmetic_opcode operator operand_type =
+   match operator, operand_type with
+   | BPlus, TInteger -> "add"
+   | BMinus, TInteger -> "sub"
+   | BTimes, TInteger -> "mul"
+   | BDiv, TInteger -> "sdiv"
+   | BMod, TInteger -> "srem"
+
+   | BPlus, TReal -> "fadd"
+   | BMinus, TReal -> "fsub"
+   | BTimes, TReal -> "fmul"
+   | BFDiv , TReal -> "fdiv"
+
+   | _ ->
+      raise (CodegenError "binary operator not supported by code generation yet")
+
+
+let rec generate_expr context (expression : Typed_ast.expr) =
    match expression.node with
    | TEInt value ->
       {
@@ -135,6 +160,54 @@ let generate_expr context (expression : Typed_ast.expr) =
          "getelementptr inbounds ([%d x i8], ptr @%s, i64 0, i64 0)"
          length global_name;
       }
+   
+   | TEBinop (operator, left, right) ->
+      let generated_left =
+         generate_expr context left
+      in
+      let generated_right = 
+         generate_expr context right
+      in
+      let opcode =
+         arithmetic_opcode operator generated_left.pcl_type
+      in
+      let result =
+         fresh_temp context
+      in
+      let instruction = 
+         Printf.sprintf "%s = %s %s %s, %s"
+         result
+         opcode
+         (llvm_type generated_left.pcl_type)
+         generated_left.operand
+         generated_right.operand
+      in
+      emit_line context.instructions instruction;
+      {
+         pcl_type = expression.pcl_type;
+         operand = result;
+      }
+         
+
+
+   | TEIntToReal operand ->
+      let generated_operand =
+         generate_expr context operand 
+         in
+         let result = fresh_temp context 
+         in 
+         let instruction =
+            Printf.sprintf "%s = sitofp %s %s to %s"
+            result
+            (llvm_type generated_operand.pcl_type)
+            generated_operand.operand
+            (llvm_type expression.pcl_type)
+         in
+         emit_line context.instructions instruction;
+         {
+            pcl_type = expression.pcl_type;
+            operand = result;
+         }
       
    | _ ->
       raise(CodegenError "expression not supported by code generation yet")
