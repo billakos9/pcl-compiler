@@ -1,0 +1,21 @@
+program codegen_fixed_arrays;
+
+var values : array [3] of integer;
+    matrix : array [2] of array [2] of integer;
+    text : array [6] of char;
+
+begin
+   values[0] := 10;
+   values[1] := values[0] + 5;
+   values[2] := values[1] * 2;
+   writeInteger(values[2]);
+   writeChar('\n');
+
+   matrix[1][0] := values[2] + 1;
+   writeInteger(matrix[1][0]);
+   writeChar('\n');
+
+   readString(6, text);
+   writeString(text);
+   writeChar('\n')
+end.

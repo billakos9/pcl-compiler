@@ -113,15 +113,6 @@ let declare_variable context name variable_type =
    context.variables <- (name, storage) :: context.variables
 
 
-let generate_address context(expression : Typed_ast.expr) =
-   match expression.node with
-   | TEId name ->
-      lookup_variable context name
-
-   | _ ->
-      raise(CodegenError "this lvalue form is not supported yet")
-
-
 let llvm_escape_string value =
    let escaped = Buffer.create (String.length value + 1) in
    String.iter (fun character ->
@@ -229,6 +220,30 @@ let comparison_opcode operator operand_type =
          (CodegenError "arrays cannot be compared")
 
 
+let generate_value_from_storage context value_type storage =
+   match value_type with
+   | TArray _ ->
+      {
+         pcl_type = value_type;
+         operand = storage.address;
+      }
+
+   | _ ->
+      let result =
+         fresh_temp context
+      in
+      emit_line context.instructions
+         (Printf.sprintf
+            "%s = load %s, ptr %s"
+            result
+            (llvm_type value_type)
+            storage.address);
+      {
+         pcl_type = value_type;
+         operand = result;
+      }
+
+
 let rec generate_expr context (expression : Typed_ast.expr) =
    match expression.node with
    | TEInt value ->
@@ -272,6 +287,21 @@ let rec generate_expr context (expression : Typed_ast.expr) =
          length global_name;
       }
    
+   | TEUnop (UAddrOf, operand) ->
+      let storage =
+         generate_address context operand
+      in
+      {
+         pcl_type = expression.pcl_type;
+         operand = storage.address;
+      }
+
+   | TEUnop (UDeref, _) ->
+      let storage =
+         generate_address context expression
+      in
+      generate_value_from_storage context expression.pcl_type storage
+
    | TEUnop (operator, operand) ->
       let generated_operand =
          generate_expr context operand
@@ -470,21 +500,16 @@ let rec generate_expr context (expression : Typed_ast.expr) =
       }
          
    | TEId name ->
-      let storage = lookup_variable context name 
+      let storage =
+         lookup_variable context name
       in
-      let result = fresh_temp context
+      generate_value_from_storage context expression.pcl_type storage
+
+   | TEIndex _ ->
+      let storage =
+         generate_address context expression
       in
-      let instruction =
-         Printf.sprintf "%s = load %s, ptr %s"
-         result
-         (llvm_type storage.stored_type)
-         storage.address
-      in
-      emit_line context.instructions instruction;
-      {
-         pcl_type = expression.pcl_type;
-         operand = result;
-      }
+      generate_value_from_storage context expression.pcl_type storage
 
    | TEIntToReal operand ->
       let generated_operand =
@@ -539,6 +564,17 @@ let rec generate_expr context (expression : Typed_ast.expr) =
       in
       emit_line context.instructions
          (Printf.sprintf "%s = call i8 @readChar()" result);
+      {
+         pcl_type = expression.pcl_type;
+         operand = result;
+      }
+
+   | TECall ("readReal", []) ->
+      let result =
+         fresh_temp context
+      in
+      emit_line context.instructions
+         (Printf.sprintf "%s = call double @readReal()" result);
       {
          pcl_type = expression.pcl_type;
          operand = result;
@@ -674,6 +710,78 @@ let rec generate_expr context (expression : Typed_ast.expr) =
       raise(CodegenError "expression not supported by code generation yet")
 
 
+and generate_address context (expression : Typed_ast.expr) =
+   match expression.node with
+   | TEId name ->
+      lookup_variable context name
+
+   | TEString value ->
+      let global_name, length =
+         generate_string_constant context value
+      in
+      {
+         address =
+            Printf.sprintf
+               "getelementptr inbounds ([%d x i8], ptr @%s, i64 0, i64 0)"
+               length
+               global_name;
+         stored_type = expression.pcl_type;
+      }
+
+   | TEIndex (array, index) ->
+      let array_storage =
+         generate_address context array
+      in
+      let generated_index =
+         generate_expr context index
+      in
+      let address =
+         fresh_temp context
+      in
+      (match array.pcl_type with
+      | TArray (Some size, element_type) ->
+         emit_line context.instructions
+            (Printf.sprintf
+               "%s = getelementptr inbounds [%d x %s], ptr %s, i64 0, i64 %s"
+               address
+               size
+               (llvm_type element_type)
+               array_storage.address
+               generated_index.operand);
+         {
+            address;
+            stored_type = element_type;
+         }
+
+      | TArray (None, element_type) ->
+         emit_line context.instructions
+            (Printf.sprintf
+               "%s = getelementptr inbounds %s, ptr %s, i64 %s"
+               address
+               (llvm_type element_type)
+               array_storage.address
+               generated_index.operand);
+         {
+            address;
+            stored_type = element_type;
+         }
+
+      | _ ->
+         raise (CodegenError "indexing requires an array"))
+
+   | TEUnop (UDeref, pointer) ->
+      let generated_pointer =
+         generate_expr context pointer
+      in
+      {
+         address = generated_pointer.operand;
+         stored_type = expression.pcl_type;
+      }
+
+   | _ ->
+      raise (CodegenError "this lvalue form is not supported yet")
+
+
 
 let rec generate_stmt context statement =
    match statement with
@@ -745,6 +853,28 @@ let rec generate_stmt context statement =
             generated_argument.operand
       in
       emit_line context.instructions instruction
+
+   | TSCall ("writeReal", [argument]) ->
+      let generated_argument =
+         generate_expr context argument
+      in
+      emit_line context.instructions
+         (Printf.sprintf
+            "call void @writeReal(double %s)"
+            generated_argument.operand)
+
+   | TSCall ("readString", [size; destination]) ->
+      let generated_size =
+         generate_expr context size
+      in
+      let destination_storage =
+         generate_address context destination
+      in
+      emit_line context.instructions
+         (Printf.sprintf
+            "call void @readString(i64 %s, ptr %s)"
+            generated_size.operand
+            destination_storage.address)
 
    | TSBlock statements ->
       List.iter (generate_stmt context) statements
@@ -820,6 +950,64 @@ let rec generate_stmt context statement =
 
       emit_label context end_label
 
+   | TSNewArray (size, destination) ->
+      let generated_size =
+         generate_expr context size
+      in
+      let destination_storage =
+         generate_address context destination
+      in
+      let element_type =
+         match destination.pcl_type with
+         | TPointer (TArray (None, element_type)) -> element_type
+         | _ ->
+            raise (CodegenError "new array requires a pointer to an open array")
+      in
+      let allocation_end =
+         fresh_temp context
+      in
+      emit_line context.instructions
+         (Printf.sprintf
+            "%s = getelementptr %s, ptr null, i64 %s"
+            allocation_end
+            (llvm_type element_type)
+            generated_size.operand);
+
+      let allocation_size =
+         fresh_temp context
+      in
+      emit_line context.instructions
+         (Printf.sprintf
+            "%s = ptrtoint ptr %s to i64"
+            allocation_size
+            allocation_end);
+
+      let allocation =
+         fresh_temp context
+      in
+      emit_line context.instructions
+         (Printf.sprintf
+            "%s = call ptr @malloc(i64 %s)"
+            allocation
+            allocation_size);
+      emit_line context.instructions
+         (Printf.sprintf
+            "store ptr %s, ptr %s"
+            allocation
+            destination_storage.address)
+
+   | TSDisposeArray destination ->
+      let destination_storage =
+         generate_address context destination
+      in
+      let generated_pointer =
+         generate_expr context destination
+      in
+      emit_line context.instructions
+         (Printf.sprintf "call void @free(ptr %s)" generated_pointer.operand);
+      emit_line context.instructions
+         (Printf.sprintf "store ptr null, ptr %s" destination_storage.address)
+
    | _ ->
       raise(CodegenError "statement not supported by code generation yet")
 
@@ -857,9 +1045,12 @@ let generate_program (program: Typed_ast.program) =
    emit_line output "declare void @writeString(ptr)";
    emit_line output "declare void @writeBoolean(i8)";
    emit_line output "declare void @writeChar(i8)";
+   emit_line output "declare void @writeReal(double)";
+   emit_line output "declare void @readString(i64, ptr)";
    emit_line output "declare i64 @readInteger()";
    emit_line output "declare i8 @readBoolean()";
    emit_line output "declare i8 @readChar()";
+   emit_line output "declare double @readReal()";
    emit_line output "declare i64 @labs(i64)";
    emit_line output "declare double @fabs(double)";
    emit_line output "declare double @sqrt(double)";
@@ -870,6 +1061,8 @@ let generate_program (program: Typed_ast.program) =
    emit_line output "declare double @exp(double)";
    emit_line output "declare double @log(double)";
    emit_line output "declare double @round(double)";
+   emit_line output "declare ptr @malloc(i64)";
+   emit_line output "declare void @free(ptr)";
    Buffer.add_buffer output context.globals;
 
 
