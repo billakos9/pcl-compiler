@@ -9,6 +9,7 @@ open Typed_ast
 
 exception CodegenError of string
 
+
 (* context *)
 type variable_storage = {
    address: string;
@@ -16,32 +17,58 @@ type variable_storage = {
 }
 
 
-type generation_context = {
+type subprogram_info = {
+   llvm_name : string;
+   header : Ast.header;
+   parent_depth : int;
+}
+
+
+type module_context = {
    globals : Buffer.t;
-   instructions : Buffer.t;
+   functions : Buffer.t;
    mutable next_string_id : int;
+   mutable next_subprogram_id : int;
+}
+
+
+type generation_context = {
+   module_context : module_context;
+   instructions : Buffer.t;
    mutable next_temp_id : int;
    mutable variables : (string * variable_storage) list;
    mutable next_label_id : int;
    mutable current_block : string;
+   mutable subprograms : (string * subprogram_info) list;
+   lexical_depth : int;
 }
 
 
-let create_context () =
+let create_module_context () =
    {
       globals = Buffer.create 256;
-      instructions = Buffer.create 256;
+      functions = Buffer.create 256;
       next_string_id = 0;
+      next_subprogram_id = 0;
+   }
+
+
+let create_generation_context module_context lexical_depth =
+   {
+      module_context;
+      instructions = Buffer.create 256;
       next_temp_id = 0;
       variables = [];
       next_label_id = 0;
       current_block = "entry";
+      subprograms = [];
+      lexical_depth;
    }
 
 
 let fresh_string_id context =
-   let id = context.next_string_id in
-   context.next_string_id <- id + 1;
+   let id = context.module_context.next_string_id in
+   context.module_context.next_string_id <- id + 1;
    id
 
 
@@ -57,6 +84,60 @@ let fresh_label context prefix =
    Printf.sprintf "%s%d" prefix id
 
 
+let fresh_subprogram_name module_context source_name =
+   let id = module_context.next_subprogram_id in
+   module_context.next_subprogram_id <- id + 1;
+   Printf.sprintf "pcl_%s_%d" source_name id
+
+
+let name_of_header = function
+   | HProcedure (name, _) ->
+      name
+
+   | HFunction (name, _, _) ->
+      name
+
+
+let register_subprogram context header =
+   let source_name =
+      name_of_header header
+   in
+
+   match List.assoc_opt source_name context.subprograms with
+   | Some info
+     when info.parent_depth = context.lexical_depth ->
+      info
+
+   | _ ->
+      let info =
+         {
+            llvm_name =
+               fresh_subprogram_name
+                  context.module_context
+                  source_name;
+            header;
+            parent_depth = context.lexical_depth;
+         }
+      in
+
+      context.subprograms <-
+         (source_name, info) :: context.subprograms;
+
+      info
+
+
+let register_local_subprogram context = function
+   | TLForward header ->
+      ignore (register_subprogram context header)
+
+   | TLDef (header, _) ->
+      ignore (register_subprogram context header)
+
+   | TLVar _
+   | TLLabel _ ->
+      ()
+
+
 let lookup_variable context name =
    match List.assoc_opt name context.variables with
    | Some storage -> storage
@@ -65,13 +146,13 @@ let lookup_variable context name =
       raise(CodegenError ("unknown variable during code generation: " ^ name))
 
 
+(* Helper functions *)
 type generated_value = {
    pcl_type: typ;
    operand: string;
 }
 
 
-(* Helper functions *)
 let rec llvm_type = function
    | TInteger -> "i64"
    | TReal -> "double"
@@ -146,7 +227,7 @@ let generate_string_constant context value =
       Printf.sprintf "@%s = private unnamed_addr constant [%d x i8] c\"%s\""
       global_name length escaped in
 
-      emit_line context.globals declaration;
+      emit_line context.module_context.globals declaration;
       (global_name, length)
 
 
@@ -244,6 +325,10 @@ let generate_value_from_storage context value_type storage =
       }
 
 
+(* Helper functions end *)
+
+
+(* Generation functions start *)
 let rec generate_expr context (expression : Typed_ast.expr) =
    match expression.node with
    | TEInt value ->
@@ -1028,14 +1113,18 @@ let generate_local context local =
    | TLDef _ ->
       raise(CodegenError "subprogram gen is not supported yet")
 
-   
-(* Helper functions end *)
+(* Generation functions end *)
 
 
+(* main *)
 let generate_program (program: Typed_ast.program) =
 
-   let context = create_context () in
+   let module_context = create_module_context ()
+   in
+   let context = create_generation_context module_context 0
+   in
    
+   List.iter (register_local_subprogram context) program.body.locals;
    List.iter (generate_local context) program.body.locals;
    List.iter (generate_stmt context) program.body.block;
    
@@ -1063,7 +1152,8 @@ let generate_program (program: Typed_ast.program) =
    emit_line output "declare double @round(double)";
    emit_line output "declare ptr @malloc(i64)";
    emit_line output "declare void @free(ptr)";
-   Buffer.add_buffer output context.globals;
+   Buffer.add_buffer output module_context.globals;
+   Buffer.add_buffer output module_context.functions;
 
 
    emit_line output "define i32 @main() {";
