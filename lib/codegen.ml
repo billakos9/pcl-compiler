@@ -98,6 +98,36 @@ let name_of_header = function
       name
 
 
+let formals_of_header = function
+   | HProcedure (_, formals) ->
+      formals
+
+   | HFunction (_, formals, _) ->
+      formals
+
+
+let return_type_of_header = function
+   | HProcedure _ ->
+      None
+
+   | HFunction (_, _, return_type) ->
+      Some return_type
+
+
+let rec flatten_formals formals =
+   match formals with
+   | [] ->
+      []
+
+   | (mode, names, parameter_type) :: rest ->
+      let current_parameters =
+         List.map
+            (fun name -> (name, mode, parameter_type))
+            names
+      in
+      current_parameters @ flatten_formals rest
+
+
 let register_subprogram context header =
    let source_name =
       name_of_header header
@@ -138,6 +168,17 @@ let register_local_subprogram context = function
       ()
 
 
+let lookup_subprogram context name =
+   match List.assoc_opt name context.subprograms with
+   | Some info ->
+      info
+
+   | None ->
+      raise
+         (CodegenError
+            ("unknown subprogram during code generation: " ^ name))
+
+
 let lookup_variable context name =
    match List.assoc_opt name context.variables with
    | Some storage -> storage
@@ -164,6 +205,46 @@ let rec llvm_type = function
    | TArray(None, _) ->
       "ptr"
    | TNil -> "ptr"
+
+
+let llvm_parameter_type mode parameter_type =
+   match mode with
+   | ByValue ->
+      llvm_type parameter_type
+
+   | ByRef ->
+      "ptr"
+
+
+let llvm_return_type header =
+   match return_type_of_header header with
+   | None ->
+      "void"
+
+   | Some return_type ->
+      llvm_type return_type
+
+
+let llvm_argument_name index =
+   Printf.sprintf "%%arg%d" index
+
+
+let llvm_explicit_parameter_list header =
+   let formals =
+      flatten_formals (formals_of_header header)
+   in
+
+   let declarations =
+      List.mapi
+         (fun index (_, mode, parameter_type) ->
+            Printf.sprintf
+               "%s %s"
+               (llvm_parameter_type mode parameter_type)
+               (llvm_argument_name index))
+         formals
+   in
+
+   String.concat ", " declarations
 
 
 let emit_line buffer line =
