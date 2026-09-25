@@ -17,10 +17,18 @@ type variable_storage = {
 }
 
 
+type frame_binding = {
+   source_name : string;
+   slot_index : int;
+   stored_type : typ;
+}
+
+
 type subprogram_info = {
    llvm_name : string;
    header : Ast.header;
    parent_depth : int;
+   parent_frame_bindings : frame_binding list;
 }
 
 
@@ -42,6 +50,9 @@ type generation_context = {
    mutable subprograms : (string * subprogram_info) list;
    mutable return_label : string option;
    mutable result_storage : variable_storage option;
+   mutable static_link : string option;
+   mutable frame_pointer : string option;
+   mutable frame_bindings : frame_binding list;
    lexical_depth : int;
 }
 
@@ -66,6 +77,9 @@ let create_generation_context module_context lexical_depth =
       subprograms = [];
       return_label = None;
       result_storage = None;
+      static_link = None;
+      frame_pointer = None;
+      frame_bindings = [];
       lexical_depth;
    }
 
@@ -78,6 +92,7 @@ let create_subprogram_context parent_context =
    in
 
    context.subprograms <- parent_context.subprograms;
+   context.static_link <- Some "%static_link";
    context
 
 
@@ -160,6 +175,7 @@ let register_subprogram context header =
                fresh_subprogram_name
                   context.module_context
                   source_name;
+            parent_frame_bindings = context.frame_bindings;
             header;
             parent_depth = context.lexical_depth;
          }
@@ -413,6 +429,103 @@ let bind_formal_parameters context header =
    List.iteri
       (bind_formal_parameter context)
       formals
+
+
+let visible_variables context =
+   let rec collect seen variables =
+      match variables with
+      | [] ->
+         []
+
+      | (name, storage) :: rest ->
+         if List.mem name seen then
+            collect seen rest
+         else
+            (name, storage)
+            :: collect (name :: seen) rest
+   in
+
+   collect [] context.variables
+
+
+let create_scope_frame context =
+   let variables =
+      visible_variables context
+   in
+
+   let frame_size =
+      List.length variables + 1
+   in
+
+   let frame =
+      fresh_temp context
+   in
+
+   emit_line context.instructions
+      (Printf.sprintf
+         "%s = alloca ptr, i64 %d"
+         frame
+         frame_size);
+
+   let parent_frame =
+      match context.static_link with
+      | Some static_link ->
+         static_link
+
+      | None ->
+         "null"
+   in
+
+   let parent_slot =
+      fresh_temp context
+   in
+
+   emit_line context.instructions
+      (Printf.sprintf
+         "%s = getelementptr inbounds ptr, ptr %s, i64 0"
+         parent_slot
+         frame);
+
+   emit_line context.instructions
+      (Printf.sprintf
+         "store ptr %s, ptr %s"
+         parent_frame
+         parent_slot);
+
+   let bindings =
+      List.mapi
+         (fun index (name, storage) ->
+            let slot_index =
+               index + 1
+            in
+
+            let slot_pointer =
+               fresh_temp context
+            in
+
+            emit_line context.instructions
+               (Printf.sprintf
+                  "%s = getelementptr inbounds ptr, ptr %s, i64 %d"
+                  slot_pointer
+                  frame
+                  slot_index);
+
+            emit_line context.instructions
+               (Printf.sprintf
+                  "store ptr %s, ptr %s"
+                  storage.address
+                  slot_pointer);
+
+            {
+               source_name = name;
+               slot_index;
+               stored_type = storage.stored_type;
+            })
+         variables
+   in
+
+   context.frame_pointer <- Some frame;
+   context.frame_bindings <- bindings
 
 
 let llvm_escape_string value =
@@ -846,6 +959,48 @@ let rec generate_expr context (expression : Typed_ast.expr) =
             operand = result;
          }
 
+   | TECall (name, arguments)
+      when List.mem_assoc name context.subprograms ->
+
+      let info =
+         lookup_subprogram context name
+      in
+
+      let return_type =
+         match return_type_of_header info.header with
+         | Some return_type ->
+            return_type
+
+         | None ->
+            raise
+               (CodegenError
+                  (name ^ " is a procedure, not a function"))
+      in
+
+      let generated_arguments =
+         generate_call_arguments
+            context
+            info.header
+            arguments
+      in
+
+      let result =
+         fresh_temp context
+      in
+
+      emit_line context.instructions
+         (Printf.sprintf
+            "%s = call %s @%s(%s)"
+            result
+            (llvm_type return_type)
+            info.llvm_name
+            generated_arguments);
+
+      {
+         pcl_type = expression.pcl_type;
+         operand = result;
+      }
+
    | TECall ("readInteger", []) ->
       let result =
          fresh_temp context
@@ -1101,6 +1256,57 @@ and generate_address context (expression : Typed_ast.expr) =
       raise (CodegenError "this lvalue form is not supported yet")
 
 
+and generate_call_arguments context header arguments =
+   let formals =
+      flatten_formals (formals_of_header header)
+   in
+
+   let rec generate_pairs remaining_formals remaining_arguments =
+      match remaining_formals, remaining_arguments with
+      | [], [] ->
+         []
+
+      | (_, mode, parameter_type) :: formal_rest,
+        argument :: argument_rest ->
+
+         let generated_argument =
+            match mode with
+            | ByValue ->
+               let value =
+                  generate_expr context argument
+               in
+
+               Printf.sprintf
+                  "%s %s"
+                  (llvm_parameter_type mode parameter_type)
+                  value.operand
+
+            | ByRef ->
+               let storage =
+                  generate_address context argument
+               in
+
+               Printf.sprintf
+                  "%s %s"
+                  (llvm_parameter_type mode parameter_type)
+                  storage.address
+         in
+
+         let generated_rest =
+            generate_pairs formal_rest argument_rest
+         in
+
+         generated_argument :: generated_rest
+
+      | _ ->
+         raise
+            (CodegenError
+               "argument count differs from parameter count")
+   in
+
+   String.concat ", "
+      (generate_pairs formals arguments)
+
 
 let rec generate_stmt context statement =
    match statement with
@@ -1121,6 +1327,32 @@ let rec generate_stmt context statement =
       in
       emit_line context.instructions instruction
 
+   | TSCall (name, arguments)
+      when List.mem_assoc name context.subprograms ->
+
+      let info =
+         lookup_subprogram context name
+      in
+
+      (match return_type_of_header info.header with
+      | Some _ ->
+         raise
+            (CodegenError
+               (name ^ " is a function, not a procedure"))
+
+      | None ->
+         let generated_arguments =
+            generate_call_arguments
+               context
+               info.header
+               arguments
+         in
+
+         emit_line context.instructions
+            (Printf.sprintf
+               "call void @%s(%s)"
+               info.llvm_name
+               generated_arguments))
 
    | TSCall ("writeInteger", [argument]) ->
       let generated_argument = generate_expr context argument
