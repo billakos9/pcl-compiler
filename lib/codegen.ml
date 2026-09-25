@@ -40,6 +40,8 @@ type generation_context = {
    mutable next_label_id : int;
    mutable current_block : string;
    mutable subprograms : (string * subprogram_info) list;
+   mutable return_label : string option;
+   mutable result_storage : variable_storage option;
    lexical_depth : int;
 }
 
@@ -62,8 +64,21 @@ let create_generation_context module_context lexical_depth =
       next_label_id = 0;
       current_block = "entry";
       subprograms = [];
+      return_label = None;
+      result_storage = None;
       lexical_depth;
    }
+
+
+let create_subprogram_context parent_context =
+   let context =
+      create_generation_context
+         parent_context.module_context
+         (parent_context.lexical_depth + 1)
+   in
+
+   context.subprograms <- parent_context.subprograms;
+   context
 
 
 let fresh_string_id context =
@@ -187,6 +202,28 @@ let lookup_variable context name =
       raise(CodegenError ("unknown variable during code generation: " ^ name))
 
 
+let lookup_result_storage context =
+   match context.result_storage with
+   | Some storage ->
+      storage
+
+   | None ->
+      raise
+         (CodegenError
+            "result used outside a function")
+
+
+let lookup_return_label context =
+   match context.return_label with
+   | Some label ->
+      label
+
+   | None ->
+      raise
+         (CodegenError
+            "return used outside a subprogram")
+
+
 (* Helper functions *)
 type generated_value = {
    pcl_type: typ;
@@ -257,22 +294,125 @@ let emit_label context label =
    context.current_block <- label
 
 
-let declare_variable context name variable_type =
-   let address = fresh_temp context
+let allocate_storage context stored_type =
+   let address =
+      fresh_temp context
    in
-   let instruction =
-      Printf.sprintf "%s = alloca %s" 
-      address
-      (llvm_type variable_type)
-   in
-   emit_line context.instructions instruction;
 
-   let storage = {
+   emit_line context.instructions
+      (Printf.sprintf
+         "%s = alloca %s"
+         address
+         (llvm_type stored_type));
+
+   {
       address;
-      stored_type = variable_type; 
+      stored_type;
    }
+
+
+let initialize_subprogram_return context header =
+   context.return_label <-
+      Some (fresh_label context "return_");
+
+   match return_type_of_header header with
+   | None ->
+      ()
+
+   | Some return_type ->
+      context.result_storage <-
+         Some (allocate_storage context return_type)
+
+
+let emit_subprogram_return_block context header =
+   let return_label =
+      lookup_return_label context
    in
-   context.variables <- (name, storage) :: context.variables
+
+   (* Normal execution reaching the end also returns. *)
+   emit_line context.instructions
+      (Printf.sprintf
+         "br label %%%s"
+         return_label);
+
+   emit_label context return_label;
+
+   match return_type_of_header header with
+   | None ->
+      emit_line context.instructions "ret void"
+
+   | Some return_type ->
+      let storage =
+         lookup_result_storage context
+      in
+
+      let result =
+         fresh_temp context
+      in
+
+      emit_line context.instructions
+         (Printf.sprintf
+            "%s = load %s, ptr %s"
+            result
+            (llvm_type return_type)
+            storage.address);
+
+      emit_line context.instructions
+         (Printf.sprintf
+            "ret %s %s"
+            (llvm_type return_type)
+            result)
+
+
+let declare_variable context name variable_type =
+   let storage =
+      allocate_storage context variable_type
+   in
+
+   context.variables <-
+      (name, storage) :: context.variables
+
+
+let bind_formal_parameter context index
+      (name, mode, parameter_type) =
+   let argument =
+      llvm_argument_name index
+   in
+
+   match mode with
+   | ByRef ->
+      let storage =
+         {
+            address = argument;
+            stored_type = parameter_type;
+         }
+      in
+      context.variables <-
+         (name, storage) :: context.variables
+
+   | ByValue ->
+      declare_variable context name parameter_type;
+
+      let storage =
+         lookup_variable context name
+      in
+
+      emit_line context.instructions
+         (Printf.sprintf
+            "store %s %s, ptr %s"
+            (llvm_type parameter_type)
+            argument
+            storage.address)
+
+
+let bind_formal_parameters context header =
+   let formals =
+      flatten_formals (formals_of_header header)
+   in
+
+   List.iteri
+      (bind_formal_parameter context)
+      formals
 
 
 let llvm_escape_string value =
@@ -453,6 +593,16 @@ let rec generate_expr context (expression : Typed_ast.expr) =
          length global_name;
       }
    
+   | TEResult ->
+      let storage =
+         lookup_result_storage context
+      in
+
+      generate_value_from_storage
+         context
+         expression.pcl_type
+         storage
+
    | TEUnop (UAddrOf, operand) ->
       let storage =
          generate_address context operand
@@ -944,6 +1094,9 @@ and generate_address context (expression : Typed_ast.expr) =
          stored_type = expression.pcl_type;
       }
 
+   | TEResult ->
+      lookup_result_storage context
+
    | _ ->
       raise (CodegenError "this lvalue form is not supported yet")
 
@@ -1076,6 +1229,22 @@ let rec generate_stmt context statement =
 
       emit_label context end_label
 
+   | TSReturn ->
+      let return_label =
+         lookup_return_label context
+      in
+
+      emit_line context.instructions
+         (Printf.sprintf
+            "br label %%%s"
+            return_label);
+
+      let continuation_label =
+         fresh_label context "after_return_"
+      in
+
+      emit_label context continuation_label
+
    | TSWhile (condition, body) ->
       let condition_label =
          fresh_label context "while_condition_"
@@ -1178,7 +1347,7 @@ let rec generate_stmt context statement =
       raise(CodegenError "statement not supported by code generation yet")
 
       
-let generate_local context local =
+and generate_local context local =
    match local with
    | TLVar groups ->
       List.iter(fun(names, variable_type) ->
@@ -1191,9 +1360,53 @@ let generate_local context local =
 
    | TLForward _ -> ()
 
-   | TLDef _ ->
-      raise(CodegenError "subprogram gen is not supported yet")
+   | TLDef (header, body) ->
+      generate_subprogram_definition context header body
 
+
+and generate_subprogram_definition parent_context header body =
+   let info =
+      lookup_subprogram
+         parent_context
+         (name_of_header header)
+   in
+
+   let context =
+      create_subprogram_context parent_context
+   in
+
+   initialize_subprogram_return context header;
+   bind_formal_parameters context header;
+
+   List.iter
+      (register_local_subprogram context)
+      body.locals;
+
+   List.iter
+      (generate_local context)
+      body.locals;
+
+   List.iter
+      (generate_stmt context)
+      body.block;
+
+   emit_subprogram_return_block context header;
+
+   let functions =
+      context.module_context.functions
+   in
+
+   emit_line functions
+      (Printf.sprintf
+         "define %s @%s(%s) {"
+         (llvm_return_type header)
+         info.llvm_name
+         (llvm_explicit_parameter_list header));
+
+   emit_line functions "entry:";
+   Buffer.add_buffer functions context.instructions;
+   emit_line functions "}";
+   emit_line functions ""
 (* Generation functions end *)
 
 
