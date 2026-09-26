@@ -58,6 +58,32 @@ Add `-O` to any mode to enable LLVM optimization.
 
 Clean Dune output with `dune clean`. Never edit `_build`; Dune regenerates it.
 
+## Data Representation
+
+The compiler uses the following concrete representation on its supported
+64-bit targets:
+
+| PCL type | LLVM representation | Storage size |
+| --- | --- | --- |
+| `integer` | signed `i64`, two's complement | 8 bytes |
+| `real` | `double`, IEEE 754 binary64 | 8 bytes |
+| `boolean` | `i1` in generated expressions | 1 addressable byte in memory |
+| `char` | `i8`, ASCII | 1 byte |
+| `^t` | opaque `ptr` | 8 bytes |
+| `array [n] of t` | `[n x llvm_type(t)]` | `n * sizeof(t)` |
+| `array of t` | `ptr` to caller-owned elements | incomplete type |
+| `nil` | null `ptr` | pointer-sized |
+
+Boolean values are extended from `i1` to `i8` when passed to the C runtime and
+truncated back to `i1` when read from it. PCL integer arithmetic and the
+`readInteger`/`writeInteger` runtime interface use `i64` throughout. This is
+why programs such as `rand_gen.pcl`, whose intermediate products can overflow
+a signed 32-bit integer, execute with 64-bit arithmetic.
+
+The generated entry point is `i32 @main()` because that is the native C ABI
+process interface. Its `i32` result is the process exit status and is unrelated
+to the 64-bit representation of PCL's `integer` type.
+
 ## Implemented Language Features
 
 - Primitive, fixed-array, open-array, pointer, and `nil` types
