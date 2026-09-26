@@ -1,0 +1,5 @@
+program semantic_error_return_outside;
+
+begin
+   return
+end.

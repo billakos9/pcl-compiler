@@ -552,7 +552,7 @@ and analyze_arguments table return_type formals args =
    in
    compare expected args
 
-and analyze_stmt table return_type stmt =
+and analyze_stmt table return_type inside_subprogram stmt =
    match stmt with
    | SEmpty -> 
       Typed_ast.TSEmpty
@@ -587,7 +587,7 @@ and analyze_stmt table return_type stmt =
    | SBlock statements ->
       let typed_statements =
          List.map(
-            analyze_stmt table return_type) statements
+            (analyze_stmt table return_type inside_subprogram)) statements
       in
       Typed_ast.TSBlock 
    typed_statements
@@ -600,14 +600,14 @@ and analyze_stmt table return_type stmt =
          raise (TypeError "if condition must be boolean");
 
       let typed_then =
-         analyze_stmt table return_type then_statement
+         analyze_stmt table return_type inside_subprogram then_statement
       in
       let typed_else =
          match else_statement with
          | None -> None
       
          | Some statement -> 
-            Some(analyze_stmt table return_type statement) 
+            Some(analyze_stmt table return_type inside_subprogram statement)
       in
       Typed_ast.TSIf(typed_condition, typed_then, typed_else)
 
@@ -618,7 +618,8 @@ and analyze_stmt table return_type stmt =
       if typed_condition.Typed_ast.pcl_type <> TBoolean then
          raise (TypeError "while condition must be boolean");
       
-      let typed_body = analyze_stmt table return_type body
+      let typed_body =
+         analyze_stmt table return_type inside_subprogram body
       in
       Typed_ast.TSWhile(typed_condition, typed_body)
 
@@ -638,12 +639,15 @@ and analyze_stmt table return_type stmt =
          Typed_ast.TSCall(name, typed_args))
 
    
-   | SReturn -> 
+   | SReturn ->
+      if not inside_subprogram then
+         raise (TypeError "return used outside a subprogram");
       Typed_ast.TSReturn
    
 
    | SLabel (name, statement) ->
-      let typed_statement = analyze_stmt table return_type statement
+      let typed_statement =
+         analyze_stmt table return_type inside_subprogram statement
       in
       Typed_ast.TSLabel(name, typed_statement)
 
@@ -754,13 +758,13 @@ and analyze_local table local =
       in
 
       let typed_body =
-         analyze_body inner_table function_return_type body
+         analyze_body inner_table function_return_type true body
       in
 
       table_with_definition, Typed_ast.TLDef(header, typed_body)
 
    
-and analyze_body table return_type body =
+and analyze_body table return_type inside_subprogram body =
    validate_local_declarations body.locals;
    validate_labels body.locals body.block;
 
@@ -774,7 +778,11 @@ and analyze_body table return_type body =
          body.locals
    in
    let typed_block = 
-      List.map(analyze_stmt table_with_locals return_type)
+      List.map
+         (analyze_stmt
+            table_with_locals
+            return_type
+            inside_subprogram)
       body.block
    in
 
@@ -793,7 +801,7 @@ let analyze_program program =
    in
    let program_table = enter_scope builtins_table 
    in
-   let typed_body = analyze_body program_table None program.body
+   let typed_body = analyze_body program_table None false program.body
    in
    {
       Typed_ast.name = program.name;
