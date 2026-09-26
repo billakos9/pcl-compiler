@@ -50,6 +50,7 @@ Clean Dune output with `dune clean`. Never edit `_build`; Dune regenerates it.
 ## Implemented Language Features
 
 - Primitive, fixed-array, open-array, pointer, and `nil` types
+- Course-defined operator precedence and `array of t` open-array syntax
 - Address-of `@`, dereference `^`, pointer comparison, and array indexing
 - `new`, `new [n]`, `dispose`, and `dispose []`
 - Procedures, functions, `result`, and `return`
@@ -73,7 +74,7 @@ Each directory contains its own README with more detail.
 
 ## Current Verification
 
-- 48 valid PCL files pass the compiler front end and LLVM generation.
-- 37 erroneous PCL files are rejected.
+- 49 valid PCL files pass the compiler front end and LLVM generation.
+- 46 erroneous PCL files are rejected.
 - Programs with `.input` and `.result` files can be compiled and compared
   end to end after linking with the runtime.

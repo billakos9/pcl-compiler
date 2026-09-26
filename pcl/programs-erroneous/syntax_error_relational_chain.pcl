@@ -1,0 +1,5 @@
+program syntax_error_relational_chain;
+
+begin
+   writeBoolean(1 < 2 < 3)
+end.

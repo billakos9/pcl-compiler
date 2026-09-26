@@ -1,0 +1,6 @@
+program semantic_error_incomplete_array_element;
+
+var values : ^array of array of integer;
+
+begin
+end.

@@ -1,0 +1,11 @@
+program semantic_error_parameter_local_collision;
+
+procedure outer(x : integer);
+   procedure x();
+   begin
+   end;
+begin
+end;
+
+begin
+end.

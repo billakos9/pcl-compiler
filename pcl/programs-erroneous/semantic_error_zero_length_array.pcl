@@ -1,0 +1,6 @@
+program semantic_error_zero_length_array;
+
+var values : array [0] of integer;
+
+begin
+end.

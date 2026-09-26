@@ -1,0 +1,8 @@
+program codegen_precedence;
+
+begin
+   writeBoolean(false and false = false);
+   writeChar('\n');
+   writeBoolean(true or true = false);
+   writeChar('\n')
+end.

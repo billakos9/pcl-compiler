@@ -6,7 +6,7 @@ rejected by the compiler.
 - `lex_error*` files exercise invalid source characters and literals.
 - `syntax_error*` files exercise invalid grammatical structure.
 - `semantic_error*` files exercise name, type, lvalue, call, label, return,
-  and forward-declaration rules.
+  forward-declaration, complete-type, parameter, and result-type rules.
 - `undefined_label.pcl` exercises an undeclared `goto` target.
 
 A successful compiler invocation for one of these files is a regression. The

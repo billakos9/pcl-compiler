@@ -10,7 +10,8 @@ Many course programs have matching files:
 
 Files prefixed with `codegen_` are focused regression programs for individual
 features. For example, `codegen_builtin_shadowing.pcl` verifies that local
-definitions of `abs` and `writeInteger` override the predefined routines.
+definitions of `abs` and `writeInteger` override the predefined routines, and
+`codegen_precedence.pcl` verifies Boolean and relational precedence.
 
 Compile one fixture with:
 

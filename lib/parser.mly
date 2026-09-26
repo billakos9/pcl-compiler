@@ -68,15 +68,14 @@
 (* ── Operator precedence (lowest to highest) ── *)
 %nonassoc T_then              (* dangling else: shift "else" over closer "then" *)
 %nonassoc T_else
-%left     T_or
-%left     T_and
-%nonassoc T_not
 %nonassoc T_eq T_ne T_lt T_gt T_le T_ge
-%left     T_plus T_minus
-%left     T_times T_fdiv T_div T_mod
-%nonassoc UNARY T_at          (* unary +, -, @x address-of *)
-%nonassoc T_lbracket          (* a[i] array indexing        *)
-%nonassoc T_caret             (* p^   dereference — highest *)
+%left     T_plus T_minus T_or
+%left     T_times T_fdiv T_div T_mod T_and
+%nonassoc T_not
+%nonassoc UNARY               (* unary + and - *)
+%nonassoc T_caret             (* p^ dereference *)
+%nonassoc T_at                (* @x address-of *)
+%nonassoc T_lbracket          (* a[i] array indexing - highest *)
 
 %%
 
@@ -144,7 +143,6 @@ typ:
 | T_boolean                                           { TBoolean }
 | T_char                                              { TChar }
 | T_array T_lbracket T_int_const T_rbracket T_of typ  { TArray(Some $3, $6) }
-| T_array T_lbracket T_rbracket T_of typ              { TArray(None, $5) }
 | T_array T_of typ                                    { TArray(None, $3) }
 | T_caret typ                                         { TPointer $2 }
 

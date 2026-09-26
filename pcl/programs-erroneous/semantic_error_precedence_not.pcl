@@ -1,0 +1,5 @@
+program semantic_error_precedence_not;
+
+begin
+   writeBoolean(not 1 = 2)
+end.

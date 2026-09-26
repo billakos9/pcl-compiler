@@ -1,0 +1,8 @@
+program semantic_error_array_result;
+
+function invalid() : array [2] of integer;
+begin
+end;
+
+begin
+end.

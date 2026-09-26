@@ -1,0 +1,8 @@
+program semantic_error_by_value_array;
+
+procedure invalid(values : array of integer);
+begin
+end;
+
+begin
+end.

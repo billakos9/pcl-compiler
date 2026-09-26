@@ -1,0 +1,6 @@
+program syntax_error_array_empty_brackets;
+
+var values : ^array [] of integer;
+
+begin
+end.

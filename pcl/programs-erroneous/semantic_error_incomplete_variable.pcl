@@ -1,0 +1,6 @@
+program semantic_error_incomplete_variable;
+
+var values : array of integer;
+
+begin
+end.

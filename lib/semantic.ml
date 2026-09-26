@@ -76,7 +76,112 @@ let header_name = function
    | HFunction (name, _, _) -> name
 
 
-let validate_local_declarations locals =
+let rec is_valid_type typ =
+   match typ with
+   | TInteger
+   | TReal
+   | TBoolean
+   | TChar ->
+      true
+
+   | TArray (Some size, element_type) ->
+      size > 0 && is_complete_type element_type
+
+   | TArray (None, element_type) ->
+      is_complete_type element_type
+
+   | TPointer target_type ->
+      is_valid_type target_type
+
+   | TNil ->
+      false
+
+
+and is_complete_type typ =
+   match typ with
+   | TInteger
+   | TReal
+   | TBoolean
+   | TChar ->
+      true
+
+   | TArray (Some size, element_type) ->
+      size > 0 && is_complete_type element_type
+
+   | TArray (None, _) ->
+      false
+
+   | TPointer target_type ->
+      is_valid_type target_type
+
+   | TNil ->
+      false
+
+
+let validate_formals formals =
+   List.iter
+      (fun (mode, names, parameter_type) ->
+         if not (is_valid_type parameter_type) then
+            raise
+               (TypeError
+                  ("invalid type for parameter "
+                   ^ String.concat ", " names));
+
+         match mode, parameter_type with
+         | ByValue, TArray _ ->
+            raise
+               (TypeError
+                  ("array parameter must be passed by reference: "
+                   ^ String.concat ", " names))
+
+         | ByValue, _
+         | ByRef, _ ->
+            ())
+      formals
+
+
+let validate_header header =
+   match header with
+   | HProcedure (_, formals) ->
+      validate_formals formals
+
+   | HFunction (name, formals, return_type) ->
+      validate_formals formals;
+
+      if not (is_valid_type return_type) then
+         raise (TypeError ("invalid result type for function " ^ name));
+
+      (match return_type with
+      | TArray _ ->
+         raise
+            (TypeError
+               ("function result cannot have array type: " ^ name))
+
+      | TInteger
+      | TReal
+      | TBoolean
+      | TChar
+      | TPointer _ ->
+         ()
+
+      | TNil ->
+         raise (TypeError ("invalid result type for function " ^ name)))
+
+
+let validate_variable_type names variable_type =
+   if not (is_valid_type variable_type) then
+      raise
+         (TypeError
+            ("invalid type for variable " ^ String.concat ", " names));
+
+   if not (is_complete_type variable_type) then
+      raise
+         (TypeError
+            ("variable must have complete type: "
+             ^ String.concat ", " names))
+
+
+let validate_local_declarations table locals =
    let add_new declarations name declaration =
       match List.assoc_opt name declarations with
       | None -> (name, declaration) :: declarations
@@ -86,7 +191,8 @@ let validate_local_declarations locals =
    let validate_local declarations = function
       | LVar groups ->
          List.fold_left
-            (fun current (names, _) ->
+            (fun current (names, variable_type) ->
+               validate_variable_type names variable_type;
                List.fold_left
                   (fun current name ->
                      add_new current name DeclaredVariable)
@@ -96,12 +202,14 @@ let validate_local_declarations locals =
             groups
 
       | LForward header ->
+         validate_header header;
          add_new
             declarations
             (header_name header)
             (ForwardHeader header)
 
       | LDef (header, _) ->
+         validate_header header;
          let name = header_name header in
          (match List.assoc_opt name declarations with
          | None ->
@@ -124,8 +232,18 @@ let validate_local_declarations locals =
          declarations
    in
 
+   let declarations_in_scope =
+      match table with
+      | scope :: _ ->
+         List.map
+            (fun (name, _) -> (name, DeclaredVariable))
+            scope
+
+      | [] ->
+         []
+   in
    let declarations =
-      List.fold_left validate_local [] locals
+      List.fold_left validate_local declarations_in_scope locals
    in
    List.iter
       (fun (name, declaration) ->
@@ -230,22 +348,6 @@ let rec is_lvalue expr =
    | EIndex (arr, _) -> is_lvalue arr
    | EUnop (UDeref, _) -> true
    | _ -> false
-
-
-let rec is_complete_type typ =
-   match typ with
-   | TInteger
-   | TReal
-   | TBoolean
-   | TChar -> true
-
-   | TArray (Some size, element_type) ->
-      size > 0 && is_complete_type element_type
-   
-   | TArray (None, _) -> false
-
-   | TPointer _ -> true
-   | TNil -> false
 
 
 let is_assignment_compatible destination_type source_type =
@@ -779,7 +881,7 @@ and analyze_local table local =
 
    
 and analyze_body table return_type inside_subprogram body =
-   validate_local_declarations body.locals;
+   validate_local_declarations table body.locals;
    validate_labels body.locals body.block;
 
    let table_with_locals, reversed_typed_locals =
