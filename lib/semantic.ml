@@ -532,13 +532,12 @@ let rec expand_formals formals =
       current @ expand_formals rest
 
 
-(* lvalue or byref ?*)
-let rec is_lvalue expr =
+(* String literals are addressable lvalues, but their storage is read-only. *)
+let rec is_writable_lvalue expr =
    match expr with
    | EId _ -> true
    | EResult -> true
-   | EString _ -> true
-   | EIndex (arr, _) -> is_lvalue arr
+   | EIndex (arr, _) -> is_writable_lvalue arr
    | EUnop (UDeref, _) -> true
    | _ -> false
 
@@ -873,8 +872,10 @@ and analyze_stmt table return_type inside_subprogram stmt =
       let typed_right = analyze_expr table return_type right
       in
       (* safeguard for proper assignment *)
-      if typed_left.Typed_ast.category <> Typed_ast.LValue then
-         raise(TypeError "assignment destination must be an lvalue");
+      if typed_left.Typed_ast.category <> Typed_ast.LValue
+         || not (is_writable_lvalue left)
+      then
+         raise(TypeError "assignment destination must be a writable lvalue");
 
       let left_type = typed_left.Typed_ast.pcl_type
       in

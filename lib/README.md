@@ -32,6 +32,7 @@ Semantic analysis checks, among other rules:
 - definite `result` assignment on every reachable function exit
 - lvalue requirements for assignment, by-reference arguments, `@`, and memory
   operations
+- read-only string-literal storage, including indexed literal elements
 - declared, uniquely defined label targets
 
 Code generation implements:

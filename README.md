@@ -88,6 +88,6 @@ Each directory contains its own README with more detail.
 ## Current Verification
 
 - 50 valid PCL files pass the compiler front end and LLVM generation.
-- 50 erroneous PCL files are rejected.
+- 52 erroneous PCL files are rejected.
 - 37 programs with expected results compile, link, execute, and match their
   expected output under the course test harness.

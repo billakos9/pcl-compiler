@@ -1,0 +1,6 @@
+program semantic_error_string_literal_assignment;
+(* Error: string literal storage is not writable. *)
+
+begin
+   "meow" := "woof"
+end.
