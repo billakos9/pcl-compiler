@@ -1,0 +1,12 @@
+program semantic_error_goto_skips_result;
+
+function skipped() : integer;
+label finished;
+begin
+   goto finished;
+   result := 1;
+   finished:
+end;
+
+begin
+end.

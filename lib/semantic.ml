@@ -328,6 +328,199 @@ let validate_labels locals statements =
       !referenced
 
 
+(* Minimal CFG used to prove that every reachable function exit has a result. *)
+type result_flow_node =
+   | FlowStep of int list
+   | FlowAssignResult of int list
+   | FlowReturn
+   | FlowEnd
+
+
+let validate_function_result function_name body =
+   let next_node_id = ref 0 in
+   let nodes = ref [] in
+
+   let fresh_node_id () =
+      let id = !next_node_id in
+      next_node_id := id + 1;
+      id
+   in
+
+   let set_node id node =
+      nodes := (id, node) :: List.remove_assoc id !nodes
+   in
+
+   let new_node node =
+      let id = fresh_node_id () in
+      set_node id node;
+      id
+   in
+
+   let label_nodes =
+      List.fold_left
+         (fun labels local ->
+            match local with
+            | LLabel names ->
+               List.fold_left
+                  (fun current name ->
+                     (name, fresh_node_id ()) :: current)
+                  labels
+                  names
+
+            | LVar _
+            | LForward _
+            | LDef _ ->
+               labels)
+         []
+         body.locals
+   in
+
+   let label_node name =
+      match List.assoc_opt name label_nodes with
+      | Some id -> id
+      | None ->
+         raise
+            (TypeError
+               ("undeclared label in function " ^ function_name ^ ": " ^ name))
+   in
+
+   let rec build_statements statements continuation =
+      List.fold_right build_statement statements continuation
+
+   and build_statement statement continuation =
+      match statement with
+      | SBlock statements ->
+         build_statements statements continuation
+
+      | SIf (EBool true, then_statement, _) ->
+         build_statement then_statement continuation
+
+      | SIf (EBool false, _, Some else_statement) ->
+         build_statement else_statement continuation
+
+      | SIf (EBool false, _, None) ->
+         continuation
+
+      | SIf (_, then_statement, else_statement) ->
+         let then_entry =
+            build_statement then_statement continuation
+         in
+         let else_entry =
+            match else_statement with
+            | None -> continuation
+            | Some statement ->
+               build_statement statement continuation
+         in
+         new_node (FlowStep [then_entry; else_entry])
+
+      | SWhile (EBool false, _) ->
+         continuation
+
+      | SWhile (condition, loop_body) ->
+         let condition_node = fresh_node_id () in
+         let body_entry =
+            build_statement loop_body condition_node
+         in
+         let successors =
+            match condition with
+            | EBool true -> [body_entry]
+            | _ -> [body_entry; continuation]
+         in
+         set_node condition_node (FlowStep successors);
+         condition_node
+
+      | SLabel (name, labeled_statement) ->
+         let id = label_node name in
+         let statement_entry =
+            build_statement labeled_statement continuation
+         in
+         set_node id (FlowStep [statement_entry]);
+         id
+
+      | SGoto name ->
+         new_node (FlowStep [label_node name])
+
+      | SReturn ->
+         new_node FlowReturn
+
+      | SAssign (EResult, _)
+      | SNew EResult
+      | SNewArray (_, EResult) ->
+         new_node (FlowAssignResult [continuation])
+
+      | SEmpty
+      | SAssign _
+      | SCall _
+      | SNew _
+      | SNewArray _
+      | SDispose _
+      | SDisposeArray _ ->
+         new_node (FlowStep [continuation])
+   in
+
+   let end_node = new_node FlowEnd in
+   let entry_node =
+      build_statements body.block end_node
+   in
+
+   let rec check pending visited =
+      match pending with
+      | [] ->
+         ()
+
+      | (node_id, result_assigned) :: rest ->
+         if List.mem (node_id, result_assigned) visited then
+            check rest visited
+         else
+            let visited =
+               (node_id, result_assigned) :: visited
+            in
+            let node =
+               match List.assoc_opt node_id !nodes with
+               | Some node -> node
+               | None ->
+                  raise
+                     (TypeError
+                        ("label has no definition in function "
+                         ^ function_name))
+            in
+            (match node with
+            | FlowStep successors ->
+               let next =
+                  List.map
+                     (fun successor -> (successor, result_assigned))
+                     successors
+               in
+               check (next @ rest) visited
+
+            | FlowAssignResult successors ->
+               let next =
+                  List.map
+                     (fun successor -> (successor, true))
+                     successors
+               in
+               check (next @ rest) visited
+
+            | FlowReturn ->
+               if not result_assigned then
+                  raise
+                     (TypeError
+                        ("return before assigning result in function "
+                         ^ function_name));
+               check rest visited
+
+            | FlowEnd ->
+               if not result_assigned then
+                  raise
+                     (TypeError
+                        ("function may finish without assigning result: "
+                         ^ function_name));
+               check rest visited)
+   in
+
+   check [entry_node, false] []
+
+
 (* expand formals makes the list vertical , one entry for each parameter *)
 let rec expand_formals formals =
    match formals with 
@@ -876,6 +1069,13 @@ and analyze_local table local =
       let typed_body =
          analyze_body inner_table function_return_type true body
       in
+
+      (match header with
+      | HFunction (function_name, _, _) ->
+         validate_function_result function_name body
+
+      | HProcedure _ ->
+         ());
 
       table_with_definition, Typed_ast.TLDef(header, typed_body)
 

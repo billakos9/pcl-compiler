@@ -29,6 +29,7 @@ Semantic analysis checks, among other rules:
 - complete variable types and complete array element types
 - non-array function results and reference-only array parameters
 - operator, assignment, call, return, allocation, and disposal types
+- definite `result` assignment on every reachable function exit
 - lvalue requirements for assignment, by-reference arguments, `@`, and memory
   operations
 - declared, uniquely defined label targets

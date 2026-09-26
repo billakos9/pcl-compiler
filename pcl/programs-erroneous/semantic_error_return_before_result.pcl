@@ -1,0 +1,10 @@
+program semantic_error_return_before_result;
+
+function early() : integer;
+begin
+   return;
+   result := 1
+end;
+
+begin
+end.

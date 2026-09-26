@@ -1,0 +1,10 @@
+program semantic_error_partial_result;
+
+function partial(condition : boolean) : integer;
+begin
+   if condition then
+      result := 1
+end;
+
+begin
+end.

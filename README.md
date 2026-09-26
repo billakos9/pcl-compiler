@@ -54,6 +54,7 @@ Clean Dune output with `dune clean`. Never edit `_build`; Dune regenerates it.
 - Address-of `@`, dereference `^`, pointer comparison, and array indexing
 - `new`, `new [n]`, `dispose`, and `dispose []`
 - Procedures, functions, `result`, and `return`
+- Definite assignment of function results across branches, loops, and jumps
 - By-value and by-reference formal parameters
 - Nested subprograms with static links and Pascal lexical scoping
 - Recursion, mutual recursion, and checked forward declarations
@@ -74,7 +75,7 @@ Each directory contains its own README with more detail.
 
 ## Current Verification
 
-- 49 valid PCL files pass the compiler front end and LLVM generation.
-- 46 erroneous PCL files are rejected.
+- 50 valid PCL files pass the compiler front end and LLVM generation.
+- 50 erroneous PCL files are rejected.
 - Programs with `.input` and `.result` files can be compiled and compared
   end to end after linking with the runtime.

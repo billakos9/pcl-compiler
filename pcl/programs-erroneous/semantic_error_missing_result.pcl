@@ -1,0 +1,8 @@
+program semantic_error_missing_result;
+
+function missing() : integer;
+begin
+end;
+
+begin
+end.
