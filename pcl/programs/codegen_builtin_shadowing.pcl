@@ -1,0 +1,18 @@
+program codegen_builtin_shadowing;
+
+function abs(n : integer) : integer;
+begin
+   result := n + 100
+end;
+
+procedure writeInteger(n : integer);
+begin
+   if n = 105 then
+      writeString("shadowed\n")
+   else
+      writeString("wrong\n")
+end;
+
+begin
+   writeInteger(abs(5))
+end.

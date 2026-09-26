@@ -1,0 +1,22 @@
+# Compiler Phase Inspectors
+
+These executables expose intermediate compiler results for learning and
+debugging. They are not part of the final compiler CLI.
+
+```bash
+dune exec ./debug_helpers/lexer_inspect.exe -- pcl/programs/hello.pcl
+dune exec ./debug_helpers/parser_inspect.exe -- pcl/programs/hello.pcl
+dune exec ./debug_helpers/semantic_inspect.exe -- pcl/programs/hello.pcl
+dune exec ./debug_helpers/codegen_inspect.exe -- pcl/programs/hello.pcl
+```
+
+- `lexer_inspect.ml` prints the token stream.
+- `parser_inspect.ml` prints the untyped AST through `ast_printer.ml`.
+- `semantic_inspect.ml` prints typed expressions, including types and
+  lvalue/rvalue categories.
+- `codegen_inspect.ml` prints generated LLVM IR.
+- `inspect_common.ml` contains shared file parsing and error handling for the
+  parser, semantic, and codegen inspectors.
+
+The inspectors intentionally stop at different phase boundaries. This makes it
+possible to identify the first phase where a source program becomes incorrect.
