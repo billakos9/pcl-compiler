@@ -1,7 +1,7 @@
 # PCL Compiler
 
 An educational compiler for PCL, written in OCaml. It reads a PCL source file,
-checks it, and emits textual LLVM IR.
+checks it, generates LLVM IR and assembly, and links a native executable.
 
 ```text
 PCL source
@@ -20,7 +20,7 @@ PCL source
 
 - OCaml and Dune
 - Menhir and ocamllex
-- Clang/LLVM for compiling generated `.ll` files
+- Clang/LLVM for compiling generated `.imm` files
 - A C compiler and the system math library for `runtime/pcl_runtime.c`
 
 ## Build And Run
@@ -31,19 +31,30 @@ Build the OCaml project:
 dune build
 ```
 
-Print LLVM IR to standard output:
+Compile a source program. This creates `hello.imm` and `hello.asm` beside the
+source file, then links `./a.out`:
 
 ```bash
 dune exec ./bin/main.exe -- pcl/programs/hello.pcl
+./a.out
 ```
 
-Write LLVM IR to a file, link it, and run it:
+Choose another executable path:
 
 ```bash
-dune exec ./bin/main.exe -- -o /tmp/hello.ll pcl/programs/hello.pcl
-clang /tmp/hello.ll runtime/pcl_runtime.c -lm -o /tmp/hello
+dune exec ./bin/main.exe -- -o /tmp/hello pcl/programs/hello.pcl
 /tmp/hello
 ```
+
+The course stream modes read PCL source from standard input. `-i` writes LLVM
+intermediate code and `-f` writes target assembly:
+
+```bash
+cat pcl/programs/hello.pcl | dune exec ./bin/main.exe -- -i
+cat pcl/programs/hello.pcl | dune exec ./bin/main.exe -- -f
+```
+
+Add `-O` to any mode to enable LLVM optimization.
 
 Clean Dune output with `dune clean`. Never edit `_build`; Dune regenerates it.
 
@@ -60,7 +71,8 @@ Clean Dune output with `dune clean`. Never edit `_build`; Dune regenerates it.
 - Recursion, mutual recursion, and checked forward declarations
 - Labels and `goto`
 - Nearest-scope lookup, including correct shadowing of predefined routines
-- LLVM output through the command-line compiler
+- Course-compatible `.imm`, `.asm`, executable, `-i`, `-f`, `-o`, and `-O`
+  command-line output modes
 
 ## Project Layout
 
@@ -77,5 +89,5 @@ Each directory contains its own README with more detail.
 
 - 50 valid PCL files pass the compiler front end and LLVM generation.
 - 50 erroneous PCL files are rejected.
-- Programs with `.input` and `.result` files can be compiled and compared
-  end to end after linking with the runtime.
+- 37 programs with expected results compile, link, execute, and match their
+  expected output under the course test harness.
