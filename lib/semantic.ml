@@ -57,6 +57,54 @@ let rec add_formals table formals =
       add_formals updated_table rest
 
 
+let validate_labels locals statements =
+   let declared =
+      List.fold_left
+         (fun names local ->
+            match local with
+            | LLabel label_names -> label_names @ names
+            | _ -> names)
+         []
+         locals
+   in
+
+   let ensure_declared name =
+      if not (List.mem name declared) then
+         raise (TypeError ("undeclared label: " ^ name))
+   in
+
+   let rec validate_stmt = function
+      | SLabel (name, statement) ->
+         ensure_declared name;
+         validate_stmt statement
+
+      | SGoto name ->
+         ensure_declared name
+
+      | SBlock statements ->
+         List.iter validate_stmt statements
+
+      | SIf (_, then_statement, else_statement) ->
+         validate_stmt then_statement;
+         Option.iter validate_stmt else_statement
+
+      | SWhile (_, statement) ->
+         validate_stmt statement
+
+      | SEmpty
+      | SAssign _
+      | SCall _
+      | SReturn
+      | SNew _
+      | SNewArray _
+      | SDispose _
+      | SDisposeArray _ ->
+         ()
+   in
+
+   List.iter validate_stmt statements
+
+
 (* expand formals makes the list vertical , one entry for each parameter *)
 let rec expand_formals formals =
    match formals with 
@@ -622,6 +670,8 @@ and analyze_local table local =
 
    
 and analyze_body table return_type body =
+   validate_labels body.locals body.block;
+
    let table_with_locals, reversed_typed_locals =
       List.fold_left (fun(current_table, typed_locals) local ->
          let updated_table, typed_local = 

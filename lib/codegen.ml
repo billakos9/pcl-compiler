@@ -53,6 +53,7 @@ type generation_context = {
    mutable static_link : string option;
    mutable frame_pointer : string option;
    mutable frame_bindings : frame_binding list;
+   mutable labels : (string * string) list;
    lexical_depth : int;
 }
 
@@ -80,6 +81,7 @@ let create_generation_context module_context lexical_depth =
       static_link = None;
       frame_pointer = None;
       frame_bindings = [];
+      labels = [];
       lexical_depth;
    }
 
@@ -118,6 +120,34 @@ let fresh_subprogram_name module_context source_name =
    let id = module_context.next_subprogram_id in
    module_context.next_subprogram_id <- id + 1;
    Printf.sprintf "pcl_%s_%d" source_name id
+
+
+let register_labels context = function
+   | TLLabel names ->
+      List.iter
+         (fun source_name ->
+            let llvm_name =
+               fresh_label context "pcl_label_"
+            in
+            context.labels <-
+               (source_name, llvm_name) :: context.labels)
+         names
+
+   | TLVar _
+   | TLForward _
+   | TLDef _ ->
+      ()
+
+
+let lookup_label context source_name =
+   match List.assoc_opt source_name context.labels with
+   | Some llvm_name ->
+      llvm_name
+
+   | None ->
+      raise
+         (CodegenError
+            ("unknown label during code generation: " ^ source_name))
 
 
 let name_of_header = function
@@ -1624,6 +1654,27 @@ let rec generate_stmt context statement =
 
       emit_label context continuation_label
 
+   | TSLabel (name, statement) ->
+      let label =
+         lookup_label context name
+      in
+      emit_line context.instructions
+         (Printf.sprintf "br label %%%s" label);
+      emit_label context label;
+      generate_stmt context statement
+
+   | TSGoto name ->
+      let label =
+         lookup_label context name
+      in
+      emit_line context.instructions
+         (Printf.sprintf "br label %%%s" label);
+
+      let continuation_label =
+         fresh_label context "after_goto_"
+      in
+      emit_label context continuation_label
+
    | TSWhile (condition, body) ->
       let condition_label =
          fresh_label context "while_condition_"
@@ -1798,6 +1849,10 @@ and generate_subprogram_definition parent_context header body =
       (declare_local_variables context)
       body.locals;
 
+   List.iter
+      (register_labels context)
+      body.locals;
+
    create_scope_frame context;
 
    List.iter
@@ -1841,6 +1896,7 @@ let generate_program (program: Typed_ast.program) =
    in
 
    List.iter (declare_local_variables context) program.body.locals;
+   List.iter (register_labels context) program.body.locals;
    create_scope_frame context;
    List.iter (register_local_subprogram context) program.body.locals;
    List.iter (generate_local context) program.body.locals;
