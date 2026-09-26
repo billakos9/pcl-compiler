@@ -30,17 +30,23 @@ let parse_channel source_name channel =
     raise (SyntaxError (lexer_position lexbuf))
 
 
-let compile_channel source_name channel =
+let compile_channel ~optimize source_name channel =
   let ast = parse_channel source_name channel in
   let typed_program = Semantic.analyze_program ast in
-  Codegen.generate_program typed_program
+  let optimized_program =
+    if optimize then
+      Optimizer.optimize_program typed_program
+    else
+      typed_program
+  in
+  Codegen.generate_program optimized_program
 
 
-let compile_file filename =
+let compile_file ~optimize filename =
   let channel = open_in filename in
   Fun.protect
     ~finally:(fun () -> close_in_noerr channel)
-    (fun () -> compile_channel filename channel)
+    (fun () -> compile_channel ~optimize filename channel)
 
 
 let write_file filename contents =
@@ -199,7 +205,7 @@ let source_stem filename =
 
 
 let build_executable ~optimize ~output_filename source_filename =
-  let llvm_ir = compile_file source_filename in
+  let llvm_ir = compile_file ~optimize source_filename in
   let stem = source_stem source_filename in
   let llvm_filename = stem ^ ".imm" in
   let assembly_filename = stem ^ ".asm" in
@@ -290,7 +296,7 @@ let run () =
       if !output_filename <> None then
         raise (DriverError "-o cannot be combined with -i or -f");
 
-      let llvm_ir = compile_channel "<stdin>" stdin in
+      let llvm_ir = compile_channel ~optimize:!optimize "<stdin>" stdin in
       (match selected_mode with
       | EmitIntermediate -> emit_intermediate ~optimize:!optimize llvm_ir
       | EmitFinal -> emit_final ~optimize:!optimize llvm_ir

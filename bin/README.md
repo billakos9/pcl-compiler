@@ -4,8 +4,8 @@
 this order:
 
 1. `parse_channel` runs the lexer and parser on a source stream.
-2. `compile_channel` runs semantic analysis and retains the typed AST before
-   generating LLVM IR.
+2. `compile_channel` runs semantic analysis and retains the typed AST. With
+   `-O`, it applies the typed-AST optimizer before generating LLVM IR.
 3. Normal mode writes `<source>.imm`, asks Clang for `<source>.asm`, and links
    the assembly with `runtime/pcl_runtime.c`.
 4. `-i` and `-f` expose the intermediate and final-code stages through standard
@@ -26,7 +26,8 @@ dune exec ./bin/main.exe -- -O input.pcl
 
 Normal mode always keeps the `.imm` and `.asm` files beside the source. The
 executable is `./a.out` unless `-o` selects another path. `-O` enables Clang's
-`-O2` optimization for emitted LLVM IR or assembly.
+`-O2` optimization after the compiler's own constant folding and safe
+algebraic simplification.
 
 Set `PCL_CLANG` to select a different Clang executable. Set `PCL_RUNTIME` to an
 explicit `pcl_runtime.c` path if the driver cannot discover the repository's

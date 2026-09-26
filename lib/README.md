@@ -14,6 +14,8 @@ wrapped OCaml library `Pcl_compiler`.
   produces `Typed_ast.program` and inserts integer-to-real conversions.
 - `typed_ast.ml`: AST annotated with every expression's PCL type and whether it
   is an lvalue or rvalue.
+- `optimizer.ml`: optional typed-AST constant folding and side-effect-safe
+  algebraic simplification.
 - `codegen.ml`: lowers the typed AST to textual LLVM IR.
 
 ## Important Boundaries
@@ -48,3 +50,16 @@ Code generation implements:
 User subprogram lookup is performed before builtin codegen cases. Combined with
 the nested symbol table, this gives user declarations correct lexical
 shadowing over predefined routines.
+
+## Optimizer Safety
+
+`Optimizer.optimize_program` is used only when the compiler receives `-O`. It
+folds literal arithmetic, comparisons, Boolean operations, unary operations,
+and integer-to-real conversions. It also removes identity operations such as
+`x + 0`, `x * 1`, and `x and true` when evaluation of `x` is preserved.
+
+The pass deliberately does not fold `x * 0`, `x and false`, or `x or true`,
+because `x` may call a function with side effects. It also leaves statement
+control flow intact: removing apparently dead branches can remove a label that
+is still reachable through `goto`. LLVM performs additional backend
+optimization after this conservative typed-AST pass.

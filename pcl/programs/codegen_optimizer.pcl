@@ -1,0 +1,31 @@
+program codegen_optimizer;
+
+var x : integer;
+
+function integer_with_effect() : integer;
+begin
+   writeChar('x');
+   result := 7
+end;
+
+function boolean_with_effect() : boolean;
+begin
+   writeChar('y');
+   result := true
+end;
+
+begin
+   x := (2 + 3) * 4 + 0;
+   writeInteger(x);
+   writeChar('\n');
+   writeBoolean(not false and (1 + 1 = 2));
+   writeChar('\n');
+   writeReal((1 + 2) / 2);
+   writeChar('\n');
+   writeInteger(integer_with_effect() * 0);
+   writeChar('\n');
+   writeBoolean(boolean_with_effect() and false);
+   writeChar('\n');
+   writeBoolean(false and boolean_with_effect());
+   writeChar('\n')
+end.

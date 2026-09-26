@@ -10,6 +10,7 @@ PCL source
   -> Ast.program
   -> semantic.ml
   -> Typed_ast.program
+  -> optimizer.ml (-O)
   -> codegen.ml
   -> LLVM IR
   -> clang + runtime/pcl_runtime.c
@@ -54,7 +55,8 @@ cat pcl/programs/hello.pcl | dune exec ./bin/main.exe -- -i
 cat pcl/programs/hello.pcl | dune exec ./bin/main.exe -- -f
 ```
 
-Add `-O` to any mode to enable LLVM optimization.
+Add `-O` to any mode to enable typed-AST constant folding followed by LLVM
+`-O2` optimization.
 
 Clean Dune output with `dune clean`. Never edit `_build`; Dune regenerates it.
 
@@ -97,6 +99,7 @@ to the 64-bit representation of PCL's `integer` type.
 - Recursion, mutual recursion, and checked forward declarations
 - Labels and `goto`
 - Nearest-scope lookup, including correct shadowing of predefined routines
+- Optional constant folding and side-effect-safe algebraic simplification
 - Course-compatible `.imm`, `.asm`, executable, `-i`, `-f`, `-o`, and `-O`
   command-line output modes
 
@@ -113,7 +116,7 @@ Each directory contains its own README with more detail.
 
 ## Current Verification
 
-- 50 valid PCL files pass the compiler front end and LLVM generation.
+- 51 valid PCL files pass the compiler front end and LLVM generation.
 - 52 erroneous PCL files are rejected.
-- 37 programs with expected results compile, link, execute, and match their
+- 38 programs with expected results compile, link, execute, and match their
   expected output under the course test harness.
