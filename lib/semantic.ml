@@ -124,7 +124,21 @@ let validate_local_declarations locals =
          declarations
    in
 
-   ignore (List.fold_left validate_local [] locals)
+   let declarations =
+      List.fold_left validate_local [] locals
+   in
+   List.iter
+      (fun (name, declaration) ->
+         match declaration with
+         | ForwardHeader _ ->
+            raise
+               (TypeError
+                  ("forward declaration has no definition: " ^ name))
+
+         | DeclaredVariable
+         | DefinedHeader _ ->
+            ())
+      declarations
 
 
 let validate_labels locals statements =
