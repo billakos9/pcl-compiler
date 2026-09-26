@@ -22,6 +22,9 @@ let structure   =
 *)
 
 ### Run the compiler
-- dune build
-- dune exec ./bin/main.exe -- ./pcl/program.pcl
-- dune clean
+- Build: `dune build`
+- Print LLVM IR: `dune exec ./bin/main.exe -- ./pcl/programs/hello.pcl`
+- Write LLVM IR: `dune exec ./bin/main.exe -- -o /tmp/hello.ll ./pcl/programs/hello.pcl`
+- Build a native executable: `clang /tmp/hello.ll runtime/pcl_runtime.c -lm -o /tmp/hello`
+- Run it: `/tmp/hello`
+- Clean generated Dune files: `dune clean`
