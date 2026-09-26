@@ -300,6 +300,18 @@ let llvm_explicit_parameter_list header =
    String.concat ", " declarations
 
 
+let llvm_subprogram_parameter_list header =
+   let explicit_parameters =
+      llvm_explicit_parameter_list header
+   in
+
+   if explicit_parameters = "" then
+      "ptr %static_link"
+   else
+      "ptr %static_link, " ^ explicit_parameters
+
+
+
 let emit_line buffer line =
    Buffer.add_string buffer line;
    Buffer.add_char buffer '\n'
@@ -526,6 +538,104 @@ let create_scope_frame context =
 
    context.frame_pointer <- Some frame;
    context.frame_bindings <- bindings
+
+
+let lookup_frame_pointer context =
+   match context.frame_pointer with
+   | Some frame_pointer ->
+      frame_pointer
+
+   | None ->
+      raise
+         (CodegenError
+            "current scope has no frame")
+
+
+let frame_pointer_at_depth context target_depth =
+   if target_depth < 0
+      || target_depth > context.lexical_depth then
+      raise
+         (CodegenError
+            "invalid lexical depth for static link");
+
+   let rec climb frame current_depth =
+      if current_depth = target_depth then
+         frame
+      else
+         let parent_slot =
+            fresh_temp context
+         in
+
+         emit_line context.instructions
+            (Printf.sprintf
+               "%s = getelementptr inbounds ptr, ptr %s, i64 0"
+               parent_slot
+               frame);
+
+         let parent_frame =
+            fresh_temp context
+         in
+
+         emit_line context.instructions
+            (Printf.sprintf
+               "%s = load ptr, ptr %s"
+               parent_frame
+               parent_slot);
+
+         climb parent_frame (current_depth - 1)
+   in
+
+   climb
+      (lookup_frame_pointer context)
+      context.lexical_depth
+
+
+let bind_parent_frame_variables context bindings =
+   let static_link =
+      match context.static_link with
+      | Some static_link ->
+         static_link
+
+      | None ->
+         raise
+            (CodegenError
+               "subprogram has no static link")
+   in
+
+   List.iter
+      (fun binding ->
+         let slot_pointer =
+            fresh_temp context
+         in
+
+         emit_line context.instructions
+            (Printf.sprintf
+               "%s = getelementptr inbounds ptr, ptr %s, i64 %d"
+               slot_pointer
+               static_link
+               binding.slot_index);
+
+         let variable_address =
+            fresh_temp context
+         in
+
+         emit_line context.instructions
+            (Printf.sprintf
+               "%s = load ptr, ptr %s"
+               variable_address
+               slot_pointer);
+
+         let storage =
+            {
+               address = variable_address;
+               stored_type = binding.stored_type;
+            }
+         in
+
+         context.variables <-
+            (binding.source_name, storage)
+            :: context.variables)
+      bindings
 
 
 let llvm_escape_string value =
@@ -980,7 +1090,7 @@ let rec generate_expr context (expression : Typed_ast.expr) =
       let generated_arguments =
          generate_call_arguments
             context
-            info.header
+            info
             arguments
       in
 
@@ -1256,9 +1366,9 @@ and generate_address context (expression : Typed_ast.expr) =
       raise (CodegenError "this lvalue form is not supported yet")
 
 
-and generate_call_arguments context header arguments =
+and generate_call_arguments context info arguments =
    let formals =
-      flatten_formals (formals_of_header header)
+      flatten_formals (formals_of_header info.header)
    in
 
    let rec generate_pairs remaining_formals remaining_arguments =
@@ -1304,8 +1414,45 @@ and generate_call_arguments context header arguments =
                "argument count differs from parameter count")
    in
 
-   String.concat ", "
-      (generate_pairs formals arguments)
+   let explicit_arguments =
+      String.concat ", "
+         (generate_pairs formals arguments)
+   in
+
+   let static_link =
+      frame_pointer_at_depth
+         context
+         info.parent_depth
+   in
+
+   if explicit_arguments = "" then
+      Printf.sprintf
+         "ptr %s"
+         static_link
+   else
+      Printf.sprintf
+         "ptr %s, %s"
+         static_link
+         explicit_arguments
+
+
+let declare_local_variables context = function
+   | TLVar groups ->
+      List.iter
+         (fun (names, variable_type) ->
+            List.iter
+               (fun name ->
+                  declare_variable
+                     context
+                     name
+                     variable_type)
+               names)
+         groups
+
+   | TLLabel _
+   | TLForward _
+   | TLDef _ ->
+      ()
 
 
 let rec generate_stmt context statement =
@@ -1344,7 +1491,7 @@ let rec generate_stmt context statement =
          let generated_arguments =
             generate_call_arguments
                context
-               info.header
+               info
                arguments
          in
 
@@ -1581,20 +1728,13 @@ let rec generate_stmt context statement =
       
 and generate_local context local =
    match local with
-   | TLVar groups ->
-      List.iter(fun(names, variable_type) ->
-         List.iter(fun name ->
-            declare_variable context name variable_type)
-            names) 
-      groups
-   
-   | TLLabel _ -> ()
-
-   | TLForward _ -> ()
-
    | TLDef (header, body) ->
       generate_subprogram_definition context header body
 
+   | TLVar _
+   | TLLabel _
+   | TLForward _ ->
+      ()
 
 and generate_subprogram_definition parent_context header body =
    let info =
@@ -1607,8 +1747,15 @@ and generate_subprogram_definition parent_context header body =
       create_subprogram_context parent_context
    in
 
+   bind_parent_frame_variables context info.parent_frame_bindings;
    initialize_subprogram_return context header;
    bind_formal_parameters context header;
+
+   List.iter
+      (declare_local_variables context)
+      body.locals;
+
+   create_scope_frame context;
 
    List.iter
       (register_local_subprogram context)
@@ -1633,7 +1780,7 @@ and generate_subprogram_definition parent_context header body =
          "define %s @%s(%s) {"
          (llvm_return_type header)
          info.llvm_name
-         (llvm_explicit_parameter_list header));
+         (llvm_subprogram_parameter_list header));
 
    emit_line functions "entry:";
    Buffer.add_buffer functions context.instructions;
@@ -1649,7 +1796,9 @@ let generate_program (program: Typed_ast.program) =
    in
    let context = create_generation_context module_context 0
    in
-   
+
+   List.iter (declare_local_variables context) program.body.locals;
+   create_scope_frame context;
    List.iter (register_local_subprogram context) program.body.locals;
    List.iter (generate_local context) program.body.locals;
    List.iter (generate_stmt context) program.body.block;
