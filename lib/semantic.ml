@@ -20,6 +20,12 @@ let make_typed_expr node pcl_type category = {
 }
 
 
+type local_declaration =
+   | DeclaredVariable
+   | ForwardHeader of header
+   | DefinedHeader of header
+
+
 let promote_to_real expression =
    match expression.Typed_ast.pcl_type with
    | TInteger -> make_typed_expr (Typed_ast.TEIntToReal expression)
@@ -32,6 +38,14 @@ let rec add_names table names typ =
    match names with
    | [] -> table
    | name :: rest ->
+      let already_declared =
+         match table with
+         | scope :: _ -> List.mem_assoc name scope
+         | [] -> false
+      in
+      if already_declared then
+         raise (TypeError ("duplicate declaration: " ^ name));
+
       let updated_table = add_symbol table name (SVar typ) in
       add_names updated_table rest typ
 
@@ -57,12 +71,77 @@ let rec add_formals table formals =
       add_formals updated_table rest
 
 
+let header_name = function
+   | HProcedure (name, _) -> name
+   | HFunction (name, _, _) -> name
+
+
+let validate_local_declarations locals =
+   let add_new declarations name declaration =
+      match List.assoc_opt name declarations with
+      | None -> (name, declaration) :: declarations
+      | Some _ -> raise (TypeError ("duplicate declaration: " ^ name))
+   in
+
+   let validate_local declarations = function
+      | LVar groups ->
+         List.fold_left
+            (fun current (names, _) ->
+               List.fold_left
+                  (fun current name ->
+                     add_new current name DeclaredVariable)
+                  current
+                  names)
+            declarations
+            groups
+
+      | LForward header ->
+         add_new
+            declarations
+            (header_name header)
+            (ForwardHeader header)
+
+      | LDef (header, _) ->
+         let name = header_name header in
+         (match List.assoc_opt name declarations with
+         | None ->
+            (name, DefinedHeader header) :: declarations
+
+         | Some (ForwardHeader forward_header) ->
+            if forward_header <> header then
+               raise
+                  (TypeError
+                     ("definition does not match forward declaration: " ^ name));
+
+            (name, DefinedHeader header)
+            :: List.remove_assoc name declarations
+
+         | Some DeclaredVariable
+         | Some (DefinedHeader _) ->
+            raise (TypeError ("duplicate declaration: " ^ name)))
+
+      | LLabel _ ->
+         declarations
+   in
+
+   ignore (List.fold_left validate_local [] locals)
+
+
 let validate_labels locals statements =
    let declared =
       List.fold_left
          (fun names local ->
             match local with
-            | LLabel label_names -> label_names @ names
+            | LLabel label_names ->
+               List.fold_left
+                  (fun current name ->
+                     if List.mem name current then
+                        raise
+                           (TypeError
+                              ("duplicate label declaration: " ^ name));
+                     name :: current)
+                  names
+                  label_names
             | _ -> names)
          []
          locals
@@ -73,13 +152,20 @@ let validate_labels locals statements =
          raise (TypeError ("undeclared label: " ^ name))
    in
 
+   let defined = ref [] in
+   let referenced = ref [] in
+
    let rec validate_stmt = function
       | SLabel (name, statement) ->
          ensure_declared name;
+         if List.mem name !defined then
+            raise (TypeError ("label defined more than once: " ^ name));
+         defined := name :: !defined;
          validate_stmt statement
 
       | SGoto name ->
-         ensure_declared name
+         ensure_declared name;
+         referenced := name :: !referenced
 
       | SBlock statements ->
          List.iter validate_stmt statements
@@ -102,7 +188,12 @@ let validate_labels locals statements =
          ()
    in
 
-   List.iter validate_stmt statements
+   List.iter validate_stmt statements;
+   List.iter
+      (fun name ->
+         if not (List.mem name !defined) then
+            raise (TypeError ("goto target is not defined: " ^ name)))
+      !referenced
 
 
 (* expand formals makes the list vertical , one entry for each parameter *)
@@ -670,6 +761,7 @@ and analyze_local table local =
 
    
 and analyze_body table return_type body =
+   validate_local_declarations body.locals;
    validate_labels body.locals body.block;
 
    let table_with_locals, reversed_typed_locals =
