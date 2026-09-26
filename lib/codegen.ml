@@ -1664,6 +1664,48 @@ let rec generate_stmt context statement =
 
       emit_label context end_label
 
+   | TSNew destination ->
+      let destination_storage =
+         generate_address context destination
+      in
+      let target_type =
+         match destination.pcl_type with
+         | TPointer target_type -> target_type
+         | _ ->
+            raise (CodegenError "new requires a pointer")
+      in
+      let allocation_end =
+         fresh_temp context
+      in
+      emit_line context.instructions
+         (Printf.sprintf
+            "%s = getelementptr %s, ptr null, i64 1"
+            allocation_end
+            (llvm_type target_type));
+
+      let allocation_size =
+         fresh_temp context
+      in
+      emit_line context.instructions
+         (Printf.sprintf
+            "%s = ptrtoint ptr %s to i64"
+            allocation_size
+            allocation_end);
+
+      let allocation =
+         fresh_temp context
+      in
+      emit_line context.instructions
+         (Printf.sprintf
+            "%s = call ptr @malloc(i64 %s)"
+            allocation
+            allocation_size);
+      emit_line context.instructions
+         (Printf.sprintf
+            "store ptr %s, ptr %s"
+            allocation
+            destination_storage.address)
+
    | TSNewArray (size, destination) ->
       let generated_size =
          generate_expr context size
@@ -1710,6 +1752,7 @@ let rec generate_stmt context statement =
             allocation
             destination_storage.address)
 
+   | TSDispose destination
    | TSDisposeArray destination ->
       let destination_storage =
          generate_address context destination

@@ -1,0 +1,13 @@
+program codegen_scalar_allocation;
+
+var value : ^integer;
+
+begin
+   new value;
+   value^ := 42;
+   writeInteger(value^);
+   writeChar('\n');
+   dispose value;
+   writeBoolean(value = nil);
+   writeChar('\n')
+end.
