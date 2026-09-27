@@ -1,122 +1,232 @@
 # PCL Compiler
 
-An educational compiler for PCL, written in OCaml. It reads a PCL source file,
-checks it, generates LLVM IR and assembly, and links a native executable.
+This is my compiler for the PCL language, written in OCaml for the Compilers
+course at NTUA.
+
+It reads a PCL program, checks it, produces LLVM IR and assembly, and finally
+links everything with the small C runtime in `runtime/pcl_runtime.c`.
+
+The basic pipeline is:
 
 ```text
 PCL source
-  -> lexer.mll
-  -> parser.mly
-  -> Ast.program
-  -> semantic.ml
-  -> Typed_ast.program
-  -> optimizer.ml (-O)
-  -> codegen.ml
-  -> LLVM IR
-  -> clang + runtime/pcl_runtime.c
-  -> native executable
+  -> lexer
+  -> parser
+  -> AST
+  -> semantic analysis
+  -> typed AST
+  -> optimizer (only with -O)
+  -> LLVM IR (.imm)
+  -> assembly (.asm)
+  -> executable
 ```
 
-## Requirements
+## Installation on Debian/Ubuntu
 
-- OCaml and Dune
-- Menhir and ocamllex
-- Clang/LLVM for compiling generated `.imm` files
-- A C compiler and the system math library for `runtime/pcl_runtime.c`
-
-## Build And Run
-
-Build the OCaml project:
+First install the system packages:
 
 ```bash
+sudo apt update
+sudo apt install git opam build-essential clang m4 pkg-config
+```
+
+Then initialize opam and create an OCaml switch. This only needs to be done
+once:
+
+```bash
+opam init -y
+eval $(opam env)
+opam switch create pcl-compiler ocaml-base-compiler.5.2.1
+eval $(opam env --switch=pcl-compiler)
+opam install dune menhir
+```
+
+The project needs Dune 3 or newer. The generated LLVM uses opaque pointers, so
+Clang 15-19 is recommended. You can check the installed versions with:
+
+```bash
+dune --version
+clang --version
+```
+
+If the system's default `clang` is too old but a newer one is installed, select
+it like this:
+
+```bash
+export PCL_CLANG=clang-18
+```
+
+Finally clone and build the project:
+
+```bash
+git clone https://github.com/billakos9/pcl-compiler.git
+cd pcl-compiler
 dune build
 ```
 
-Compile a source program. This creates `hello.imm` and `hello.asm` beside the
-source file, then links `./a.out`:
+When opening a new terminal, remember to load the opam switch again:
+
+```bash
+eval $(opam env --switch=pcl-compiler)
+```
+
+### Common setup problems
+
+If `dune` or `menhir` is not found after installation, the opam environment is
+probably not loaded. Run the `eval $(opam env ...)` command above again.
+
+If the compiler cannot find Clang, set its command explicitly:
+
+```bash
+export PCL_CLANG=clang-18
+```
+
+The compiler normally finds its C runtime on its own. If it cannot find it,
+give the path manually from the repository root:
+
+```bash
+export PCL_RUNTIME="$PWD/runtime/pcl_runtime.c"
+```
+
+## Basic usage
+
+Compile a PCL file with:
 
 ```bash
 dune exec ./bin/main.exe -- pcl/programs/hello.pcl
+```
+
+This creates:
+
+- `pcl/programs/hello.imm`: generated LLVM IR
+- `pcl/programs/hello.asm`: generated assembly
+- `./a.out`: final executable
+
+Run it with:
+
+```bash
 ./a.out
 ```
 
-Choose another executable path:
+Use `-o` to choose another executable name:
 
 ```bash
-dune exec ./bin/main.exe -- -o /tmp/hello pcl/programs/hello.pcl
-/tmp/hello
+dune exec ./bin/main.exe -- -o hello pcl/programs/hello.pcl
+./hello
 ```
 
-The course stream modes read PCL source from standard input. `-i` writes LLVM
-intermediate code and `-f` writes target assembly:
+### Optimizations
+
+Pass `-O` to turn optimizations on:
 
 ```bash
+dune exec ./bin/main.exe -- -O pcl/programs/hello.pcl
+```
+
+With `-O`, the compiler first performs some constant folding and safe
+algebraic simplifications on the typed AST. After that, Clang runs its normal
+`-O2` LLVM optimizations.
+
+### Intermediate and final code
+
+The course also requires the following stdin/stdout modes:
+
+```bash
+# Read PCL from stdin and print LLVM IR
 cat pcl/programs/hello.pcl | dune exec ./bin/main.exe -- -i
+
+# Read PCL from stdin and print assembly
 cat pcl/programs/hello.pcl | dune exec ./bin/main.exe -- -f
 ```
 
-Add `-O` to any mode to enable typed-AST constant folding followed by LLVM
-`-O2` optimization.
+`-O` can also be combined with `-i` or `-f`.
 
-Clean Dune output with `dune clean`. Never edit `_build`; Dune regenerates it.
+## Data sizes
 
-## Data Representation
+These are the representations used by this implementation:
 
-The compiler uses the following concrete representation on its supported
-64-bit targets:
-
-| PCL type | LLVM representation | Storage size |
+| PCL type | LLVM type | Size |
 | --- | --- | --- |
-| `integer` | signed `i64`, two's complement | 8 bytes |
-| `real` | `double`, IEEE 754 binary64 | 8 bytes |
-| `boolean` | `i1` in generated expressions | 1 addressable byte in memory |
-| `char` | `i8`, ASCII | 1 byte |
-| `^t` | opaque `ptr` | 8 bytes |
-| `array [n] of t` | `[n x llvm_type(t)]` | `n * sizeof(t)` |
-| `array of t` | `ptr` to caller-owned elements | incomplete type |
-| `nil` | null `ptr` | pointer-sized |
+| `integer` | signed `i64` | 8 bytes |
+| `real` | IEEE 754 `double` | 8 bytes |
+| `boolean` | `i1` internally, `i8` at the C runtime boundary | 1 byte in memory |
+| `char` | ASCII `i8` | 1 byte |
+| pointer (`^t`) | `ptr` | 8 bytes on a 64-bit machine |
+| `array [n] of t` | `[n x t]` | `n * sizeof(t)` |
 
-Boolean values are extended from `i1` to `i8` when passed to the C runtime and
-truncated back to `i1` when read from it. PCL integer arithmetic and the
-`readInteger`/`writeInteger` runtime interface use `i64` throughout. This is
-why programs such as `rand_gen.pcl`, whose intermediate products can overflow
-a signed 32-bit integer, execute with 64-bit arithmetic.
+PCL integer calculations, `readInteger`, and `writeInteger` all use 64-bit
+integers. The `i32` used by the generated native `main` function is only its
+process exit status; it is not the PCL integer type.
 
-The generated entry point is `i32 @main()` because that is the native C ABI
-process interface. Its `i32` result is the process exit status and is unrelated
-to the 64-bit representation of PCL's `integer` type.
+## What is implemented
 
-## Implemented Language Features
+The compiler currently supports the PCL features needed by the course:
 
-- Primitive, fixed-array, open-array, pointer, and `nil` types
-- Course-defined operator precedence and `array of t` open-array syntax
-- Address-of `@`, dereference `^`, pointer comparison, and array indexing
-- `new`, `new [n]`, `dispose`, and `dispose []`
-- Procedures, functions, `result`, and `return`
-- Definite assignment of function results across branches, loops, and jumps
-- By-value and by-reference formal parameters
-- Nested subprograms with static links and Pascal lexical scoping
-- Recursion, mutual recursion, and checked forward declarations
-- Labels and `goto`
-- Nearest-scope lookup, including correct shadowing of predefined routines
-- Optional constant folding and side-effect-safe algebraic simplification
-- Course-compatible `.imm`, `.asm`, executable, `-i`, `-f`, `-o`, and `-O`
-  command-line output modes
+- primitive types, fixed/open arrays and pointers
+- expressions, assignments, conditions and loops
+- functions, procedures, `result` and `return`
+- by-value and by-reference parameters
+- nested subprograms and static links
+- recursion, mutual recursion and `forward`
+- `new`, `new [n]`, `dispose` and `dispose []`
+- labels and `goto`
+- the predefined PCL input/output and mathematical functions
+- short-circuit `and`/`or`
+- optional typed-AST and LLVM optimizations
 
-## Project Layout
+## Known issues and limitations
 
-- `lib/`: compiler phases and shared representations
-- `bin/`: command-line compiler entry point
-- `debug_helpers/`: one inspector for each compiler phase
-- `pcl/programs/`: valid examples and regression fixtures
-- `pcl/programs-erroneous/`: negative lexer/parser/semantic fixtures
-- `runtime/`: C implementation of PCL input/output routines
+- The compiler generates code for the machine where it is running. It does not
+  currently support cross-compilation to another architecture.
+- There are no runtime array-bounds checks. Invalid indexes can therefore lead
+  to invalid memory access.
+- There are no extra runtime checks for null pointer dereference, division by
+  zero, double `dispose`, or allocation failure.
+- Lexer and parser errors include a source position, but most semantic errors
+  do not yet include line and column information because source locations are
+  not stored in the AST.
+- PCL integers are represented as `i64`, but integer literals are initially
+  parsed using OCaml's `int`, so the full `i64` literal range is not available
+  on every OCaml host.
+- The custom optimizer is intentionally small and conservative. More advanced
+  work such as constant propagation, dead-store elimination and common
+  subexpression elimination is left to LLVM.
 
-Each directory contains its own README with more detail.
+## Testing
 
-## Current Verification
+The repository contains only the programs provided by the course:
 
-- 34 course PCL programs pass the compiler front end and LLVM generation.
-- 35 erroneous course programs are rejected.
-- 34 course programs with expected results compile, link, execute, and match their
-  expected output under the course test harness.
+- `pcl/programs/`: 34 valid programs
+- `pcl/programs-erroneous/`: 35 programs that must be rejected
+
+At the current checkpoint, all 34 valid programs compile and produce their
+expected output, and all 35 erroneous programs are rejected.
+
+Useful commands while working on the compiler:
+
+```bash
+dune build
+dune runtest
+dune clean
+```
+
+There are also small phase inspectors under `debug_helpers/`. For example:
+
+```bash
+dune exec ./debug_helpers/lexer_inspect.exe -- pcl/programs/hello.pcl
+dune exec ./debug_helpers/parser_inspect.exe -- pcl/programs/hello.pcl
+dune exec ./debug_helpers/semantic_inspect.exe -- pcl/programs/hello.pcl
+dune exec ./debug_helpers/optimizer_inspect.exe -- pcl/programs/rand_gen.pcl
+dune exec ./debug_helpers/codegen_inspect.exe -- pcl/programs/hello.pcl
+```
+
+## Repository layout
+
+- `lib/`: AST, lexer, parser, semantic analysis, optimizer and LLVM codegen
+- `bin/`: command-line compiler
+- `runtime/`: the C runtime linked with generated programs
+- `debug_helpers/`: simple tools for inspecting each compiler phase
+- `pcl/`: the valid and erroneous course programs
+
+The smaller READMEs inside these directories contain some extra notes about
+each part of the project.
