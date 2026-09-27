@@ -7,7 +7,7 @@ debugging. They are not part of the final compiler CLI.
 dune exec ./debug_helpers/lexer_inspect.exe -- pcl/programs/hello.pcl
 dune exec ./debug_helpers/parser_inspect.exe -- pcl/programs/hello.pcl
 dune exec ./debug_helpers/semantic_inspect.exe -- pcl/programs/hello.pcl
-dune exec ./debug_helpers/optimizer_inspect.exe -- pcl/programs/codegen_optimizer.pcl
+dune exec ./debug_helpers/optimizer_inspect.exe -- pcl/programs/rand_gen.pcl
 dune exec ./debug_helpers/codegen_inspect.exe -- pcl/programs/hello.pcl
 ```
 

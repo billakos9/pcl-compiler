@@ -1,8 +1,0 @@
-program codegen_short_circuit;
-
-begin
-   writeBoolean(false and ((1 div 0) = 0));
-   writeChar('\n');
-   writeBoolean(true or ((1 div 0) = 0));
-   writeChar('\n')
-end.

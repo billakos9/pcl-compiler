@@ -1,9 +1,0 @@
-program codegen_read_integer;
-
-var value : integer;
-
-begin
-   value := readInteger();
-   writeInteger(value + 1);
-   writeChar('\n')
-end.

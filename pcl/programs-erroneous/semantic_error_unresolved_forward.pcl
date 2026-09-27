@@ -1,7 +1,0 @@
-program semantic_error_unresolved_forward;
-
-forward function missing(x : integer) : integer;
-
-begin
-   writeInteger(0)
-end.

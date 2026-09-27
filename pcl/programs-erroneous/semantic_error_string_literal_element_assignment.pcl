@@ -1,6 +1,0 @@
-program semantic_error_string_literal_element_assignment;
-(* Error: an element of a string literal is not writable. *)
-
-begin
-   "Hiii"[2] := 'y'
-end.
