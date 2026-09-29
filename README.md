@@ -129,8 +129,6 @@ algebraic simplifications on the typed AST. After that, Clang runs its normal
 
 ### Intermediate and final code
 
-The course also requires the following stdin/stdout modes:
-
 ```bash
 # Read PCL from stdin and print LLVM IR
 cat pcl/programs/hello.pcl | dune exec ./bin/main.exe -- -i
@@ -160,7 +158,7 @@ process exit status; it is not the PCL integer type.
 
 ## What is implemented
 
-The compiler currently supports the PCL features needed by the course:
+The compiler currently supports the PCL features:
 
 - primitive types, fixed/open arrays and pointers
 - expressions, assignments, conditions and loops
@@ -194,7 +192,7 @@ The compiler currently supports the PCL features needed by the course:
 
 ## Testing
 
-The repository contains only the programs provided by the course:
+The repository contains only the programs provided by the course under the repository [Compilers](https://github.com/kostis/ntua_compilers):
 
 - `pcl/programs/`: 34 valid programs
 - `pcl/programs-erroneous/`: 35 programs that must be rejected
@@ -210,7 +208,8 @@ dune runtest
 dune clean
 ```
 
-There are also small phase inspectors under `debug_helpers/`. For example:
+There are also small phase inspectors under `debug_helpers/` to test each module seperately. 
+For example:
 
 ```bash
 dune exec ./debug_helpers/lexer_inspect.exe -- pcl/programs/hello.pcl
@@ -225,7 +224,7 @@ dune exec ./debug_helpers/codegen_inspect.exe -- pcl/programs/hello.pcl
 - `lib/`: AST, lexer, parser, semantic analysis, optimizer and LLVM codegen
 - `bin/`: command-line compiler
 - `runtime/`: the C runtime linked with generated programs
-- `debug_helpers/`: simple tools for inspecting each compiler phase
+- `debug_helpers/`: simple help tools for inspecting each compiler phase
 - `pcl/`: the valid and erroneous course programs
 
 The smaller READMEs inside these directories contain some extra notes about
