@@ -98,14 +98,14 @@ dune exec ./bin/main.exe -- pcl/programs/hello.pcl
 
 This creates:
 
-- `pcl/programs/hello.imm`: generated LLVM IR
-- `pcl/programs/hello.asm`: generated assembly
-- `./a.out`: final executable
+- `outputs/hello.imm`: generated LLVM IR
+- `outputs/hello.asm`: generated assembly
+- `outputs/a.out`: final executable
 
 Run it with:
 
 ```bash
-./a.out
+./outputs/a.out
 ```
 
 Use `-o` to choose another executable name:

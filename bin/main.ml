@@ -9,6 +9,9 @@ type output_mode =
   | EmitFinal
 
 
+let output_directory = "outputs"
+
+
 let lexer_position lexbuf =
   let position = lexbuf.Lexing.lex_curr_p in
   let column = position.pos_cnum - position.pos_bol + 1 in
@@ -54,6 +57,23 @@ let write_file filename contents =
   Fun.protect
     ~finally:(fun () -> close_out_noerr channel)
     (fun () -> output_string channel contents)
+
+
+let ensure_directory directory =
+  try
+    Unix.mkdir directory 0o755
+  with
+  | Unix.Unix_error (Unix.EEXIST, _, _)
+    when Sys.is_directory directory ->
+      ()
+  | Unix.Unix_error (error, function_name, argument) ->
+      raise
+        (DriverError
+           (Printf.sprintf
+              "cannot create output directory in %s(%s): %s"
+              function_name
+              argument
+              (Unix.error_message error)))
 
 
 let remove_if_present filename =
@@ -198,15 +218,19 @@ let link_executable ~assembly_filename ~output_filename =
 
 
 let source_stem filename =
-  if Filename.extension filename = "" then
-    filename
+  let basename = Filename.basename filename in
+  if Filename.extension basename = "" then
+    basename
   else
-    Filename.chop_extension filename
+    Filename.chop_extension basename
 
 
 let build_executable ~optimize ~output_filename source_filename =
   let llvm_ir = compile_file ~optimize source_filename in
-  let stem = source_stem source_filename in
+  ensure_directory output_directory;
+  let stem =
+    Filename.concat output_directory (source_stem source_filename)
+  in
   let llvm_filename = stem ^ ".imm" in
   let assembly_filename = stem ^ ".asm" in
   write_file llvm_filename llvm_ir;
@@ -282,7 +306,7 @@ let run () =
       let executable =
         match !output_filename with
         | Some filename -> filename
-        | None -> "a.out"
+        | None -> Filename.concat output_directory "a.out"
       in
       build_executable
         ~optimize:!optimize

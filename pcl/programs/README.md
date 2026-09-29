@@ -13,5 +13,5 @@ Compile one fixture with:
 
 ```bash
 dune exec ./bin/main.exe -- pcl/programs/hello.pcl
-./a.out
+./outputs/a.out
 ```

@@ -1,6 +1,7 @@
 .DS_Store
 Proxeiro.ml
 _build/
+outputs/
 *.imm
 *.asm
 a.out
