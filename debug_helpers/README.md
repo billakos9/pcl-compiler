@@ -18,8 +18,6 @@ dune exec ./debug_helpers/codegen_inspect.exe -- pcl/programs/hello.pcl
 - `optimizer_inspect.ml` prints LLVM IR generated from the optimized typed AST,
   before Clang performs its own optimization passes.
 - `codegen_inspect.ml` prints generated LLVM IR.
-- `inspect_common.ml` contains shared file parsing and error handling for the
-  parser, semantic, and codegen inspectors.
+- `inspect_common.ml` contains shared file parsing and error handling for the parser, semantic, and codegen inspectors.
 
-The inspectors intentionally stop at different phase boundaries. This makes it
-possible to identify the first phase where a source program becomes incorrect.
+The inspectors intentionally stop at different phase boundaries. This makes it possible to identify the first phase where a source program becomes incorrect.

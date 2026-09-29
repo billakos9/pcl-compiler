@@ -1,6 +1,6 @@
 # Compiler Driver
 
-`main.ml` is the user-facing compiler executable. It connects the phases in
+`main.ml` is the compiler executable. It connects the phases in
 this order:
 
 1. `parse_channel` runs the lexer and parser on a source stream.
