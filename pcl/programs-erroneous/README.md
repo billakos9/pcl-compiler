@@ -9,5 +9,5 @@ rejected by the compiler.
   forward-declaration, complete-type, parameter, and result-type rules.
 - `undefined_label.pcl` exercises an undeclared `goto` target.
 
-A successful compiler invocation for one of these files is a regression. The
-compiler should print an error to standard error and return a nonzero exit code.
+If one of these files compiles successfully, something is wrong. The compiler
+should print an error and return a nonzero exit code.

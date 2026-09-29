@@ -1,7 +1,7 @@
 # Compiler Driver
 
-`main.ml` is the compiler executable. It connects the phases in
-this order:
+`main.ml` is the file that runs the compiler. It connects the steps in this
+order:
 
 1. `parse_channel` runs the lexer and parser on a source stream.
 2. `compile_channel` runs semantic analysis and retains the typed AST. With
@@ -12,8 +12,8 @@ this order:
 4. `-i` and `-f` expose the intermediate and final-code stages through standard
    input and standard output.
 
-The driver reports lexical, syntax, semantic, code-generation, process, and
-file errors on standard error and exits with a nonzero status.
+Errors are printed to standard error and the program exits with a nonzero
+status.
 
 ## Usage
 
@@ -25,16 +25,13 @@ cat input.pcl | dune exec ./bin/main.exe -- -f
 dune exec ./bin/main.exe -- -O input.pcl
 ```
 
-Normal mode creates an `outputs/` directory in the current working directory.
-It keeps the `.imm` and `.asm` files there, and the default executable is
-`outputs/a.out`. An explicit `-o` still selects another executable path. `-O`
-enables Clang's `-O2` optimization after the compiler's own constant folding
-and safe algebraic simplification.
+Normal mode creates an `outputs/` folder. The `.imm`, `.asm`, and default
+executable are saved there. Use `-o` to choose another executable path and
+`-O` to enable the compiler optimizations and Clang `-O2`.
 
 Set `PCL_CLANG` to select a different Clang executable. Set `PCL_RUNTIME` to an
 explicit `pcl_runtime.c` path if the driver cannot discover the repository's
 runtime while invoked from another directory.
 
-`dune` defines the executable and links it against the `pcl_compiler` and
-`unix` libraries. The latter is used to run Clang without passing commands
-through a shell.
+The executable uses the `pcl_compiler` library for the compiler code and the
+OCaml `unix` library to run Clang.

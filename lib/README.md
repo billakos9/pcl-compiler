@@ -1,9 +1,9 @@
 # Compiler Library
 
-This directory contains the compiler itself. Dune packages these modules as the
-wrapped OCaml library `Pcl_compiler`.
+This folder contains most of the compiler. Dune puts these files in the OCaml
+library `Pcl_compiler`.
 
-## Files
+## What each file does
 
 - `lexer.mll`: ocamllex rules that convert source characters into parser tokens.
 - `parser.mly`: Menhir grammar that converts tokens into `Ast.program`.
@@ -18,13 +18,13 @@ wrapped OCaml library `Pcl_compiler`.
   algebraic simplification.
 - `codegen.ml`: lowers the typed AST to textual LLVM IR.
 
-## Important Boundaries
+## How the parts connect
 
-The parser records what the program says; it does not decide whether the
-program is type-correct. The semantic analyzer validates the AST and adds the
-facts codegen needs. Codegen therefore consumes only the typed AST.
+The parser builds the AST but does not check if the types make sense. The
+semantic analyzer does those checks and creates the typed AST. Codegen uses
+that typed AST to create LLVM IR.
 
-Semantic analysis checks, among other rules:
+The semantic analyzer checks:
 
 - identifier lookup from the innermost scope outward
 - duplicate declarations and matching forward definitions
@@ -47,19 +47,15 @@ Code generation implements:
 - libc allocation through `malloc` and `free`
 - calls to the C runtime for PCL input/output
 
-User subprogram lookup is performed before builtin codegen cases. Combined with
-the nested symbol table, this gives user declarations correct lexical
-shadowing over predefined routines.
+Codegen looks for user functions before builtins. This allows a user function
+to shadow a builtin with the same name.
 
-## Optimizer Safety
+## Optimizer
 
-`Optimizer.optimize_program` is used only when the compiler receives `-O`. It
-folds literal arithmetic, comparisons, Boolean operations, unary operations,
-and integer-to-real conversions. It also removes identity operations such as
-`x + 0`, `x * 1`, and `x and true` when evaluation of `x` is preserved.
+`Optimizer.optimize_program` runs only with `-O`. It folds constant arithmetic,
+comparisons, Boolean and unary operations, and integer-to-real conversions. It
+also simplifies things such as `x + 0`, `x * 1`, and `x and true`.
 
-The pass deliberately does not fold `x * 0`, `x and false`, or `x or true`,
-because `x` may call a function with side effects. It also leaves statement
-control flow intact: removing apparently dead branches can remove a label that
-is still reachable through `goto`. LLVM performs additional backend
-optimization after this conservative typed-AST pass.
+It does not fold `x * 0`, `x and false`, or `x or true`, because evaluating `x`
+may have side effects. It also does not remove branches because a `goto` may
+still reach a label inside them. LLVM does the rest of the optimization.

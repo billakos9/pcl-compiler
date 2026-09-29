@@ -1,6 +1,7 @@
 # PCL Runtime
 
-`pcl_runtime.c` supplies the input/output functions called by generated LLVM IR. The compiler driver passes it to Clang while linking the generated assembly; the OCaml compiler does not execute the runtime itself.
+`pcl_runtime.c` contains the input/output functions used by the generated LLVM
+IR. Clang links it with the generated assembly.
 
 Provided routines:
 
@@ -8,13 +9,13 @@ Provided routines:
   `writeString`
 - input: `readInteger`, `readBoolean`, `readChar`, `readReal`, `readString`
 
-Generated LLVM calls the platform C library directly for mathematical functions, `malloc`, and `free`. Scalar and array allocation therefore happens when the compiled program runs, not while the compiler is running.
+The generated code uses the C library for maths, `malloc`, and `free`. Memory is
+allocated when the compiled program runs, not while the compiler runs.
 
-The compiler performs this link automatically in normal mode. The equivalent manual command for an LLVM module is:
+The compiler links this file automatically. The same step can be done manually:
 
 ```bash
 clang -x ir output.imm -x c runtime/pcl_runtime.c -lm -o output
 ```
 
-The `-lm` flag links the system math library used by PCL's real-number
-predefined functions.
+`-lm` links the system math library.

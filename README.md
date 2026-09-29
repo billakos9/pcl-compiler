@@ -3,10 +3,10 @@
 This is my compiler for the PCL language, written in OCaml for the Compilers
 course at NTUA.
 
-It reads a PCL program, checks it, produces LLVM IR and assembly, and finally
-links everything with the small C runtime in `runtime/pcl_runtime.c`.
+It reads a PCL program, checks it, creates LLVM IR and assembly, and then links
+the result with `runtime/pcl_runtime.c`.
 
-The basic pipeline is:
+It works like this:
 
 ```text
 PCL source
@@ -70,7 +70,7 @@ When opening a new terminal, remember to load the opam switch again:
 eval $(opam env --switch=pcl-compiler)
 ```
 
-### Common setup problems
+### Setup problems
 
 If `dune` or `menhir` is not found after installation, the opam environment is
 probably not loaded. Run the `eval $(opam env ...)` command above again.
@@ -123,9 +123,8 @@ Pass `-O` to turn optimizations on:
 dune exec ./bin/main.exe -- -O pcl/programs/hello.pcl
 ```
 
-With `-O`, the compiler first performs some constant folding and safe
-algebraic simplifications on the typed AST. After that, Clang runs its normal
-`-O2` LLVM optimizations.
+With `-O`, the compiler simplifies constant expressions in the typed AST and
+then asks Clang to use `-O2`.
 
 ### Intermediate and final code
 
@@ -141,7 +140,7 @@ cat pcl/programs/hello.pcl | dune exec ./bin/main.exe -- -f
 
 ## Data sizes
 
-These are the representations used by this implementation:
+These are the sizes I used:
 
 | PCL type | LLVM type | Size |
 | --- | --- | --- |
@@ -156,9 +155,9 @@ PCL integer calculations, `readInteger`, and `writeInteger` all use 64-bit
 integers. The `i32` used by the generated native `main` function is only its
 process exit status; it is not the PCL integer type.
 
-## What is implemented
+## Supported features
 
-The compiler currently supports the PCL features:
+The compiler supports:
 
 - primitive types, fixed/open arrays and pointers
 - expressions, assignments, conditions and loops
@@ -172,33 +171,30 @@ The compiler currently supports the PCL features:
 - short-circuit `and`/`or`
 - optional typed-AST and LLVM optimizations
 
-## Known issues and limitations
+## Known problems
 
-- The compiler generates code for the machine where it is running. It does not
-  currently support cross-compilation to another architecture.
-- There are no runtime array-bounds checks. Invalid indexes can therefore lead
-  to invalid memory access.
-- There are no extra runtime checks for null pointer dereference, division by
-  zero, double `dispose`, or allocation failure.
+- It generates code for the machine where it runs. There is no
+  cross-compilation.
+- There are no array-bounds checks at runtime.
+- There are no runtime checks for null pointer dereference, division by zero,
+  double `dispose`, or allocation failure.
 - Lexer and parser errors include a source position, but most semantic errors
   do not yet include line and column information because source locations are
   not stored in the AST.
 - PCL integers are represented as `i64`, but integer literals are initially
   parsed using OCaml's `int`, so the full `i64` literal range is not available
   on every OCaml host.
-- The custom optimizer is intentionally small and conservative. More advanced
-  work such as constant propagation, dead-store elimination and common
-  subexpression elimination is left to LLVM.
+- The custom optimizer is small. LLVM handles the more advanced optimizations.
 
 ## Testing
 
-The repository contains only the programs provided by the course under the repository [Compilers](https://github.com/kostis/ntua_compilers):
+The repository contains two sets of test programs:
 
 - `pcl/programs/`: 34 valid programs
 - `pcl/programs-erroneous/`: 35 programs that must be rejected
 
-At the current checkpoint, all 34 valid programs compile and produce their
-expected output, and all 35 erroneous programs are rejected.
+Right now, all 34 valid programs compile and give the expected output. All 35
+erroneous programs are rejected.
 
 Useful commands while working on the compiler:
 
@@ -208,8 +204,7 @@ dune runtest
 dune clean
 ```
 
-There are also small phase inspectors under `debug_helpers/` to test each module seperately. 
-For example:
+The small programs in `debug_helpers/` show the output of each compiler step:
 
 ```bash
 dune exec ./debug_helpers/lexer_inspect.exe -- pcl/programs/hello.pcl
@@ -224,8 +219,7 @@ dune exec ./debug_helpers/codegen_inspect.exe -- pcl/programs/hello.pcl
 - `lib/`: AST, lexer, parser, semantic analysis, optimizer and LLVM codegen
 - `bin/`: command-line compiler
 - `runtime/`: the C runtime linked with generated programs
-- `debug_helpers/`: simple help tools for inspecting each compiler phase
-- `pcl/`: the valid and erroneous course programs
+- `debug_helpers/`: small tools for checking each compiler step
+- `pcl/`: valid and erroneous test programs
 
-The smaller READMEs inside these directories contain some extra notes about
-each part of the project.
+The smaller READMEs have a few more notes about each folder.

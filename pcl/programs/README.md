@@ -1,10 +1,9 @@
 # Valid PCL Programs
 
-This directory mirrors the valid `.pcl` programs supplied in the course
-`ntua_compilers` repository. Every program should pass lexing, parsing,
-semantic analysis, LLVM generation, native linking, and execution.
+This folder contains valid `.pcl` programs. Every program should compile and
+run without an error.
 
-Many course programs have matching files:
+Many programs also have:
 
 - `<name>.input`: standard input supplied to the compiled program
 - `<name>.result`: expected standard output
