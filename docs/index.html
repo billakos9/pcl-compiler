@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="PCL Compiler is an OCaml compiler that performs semantic analysis, generates LLVM IR and builds native executables."
+    />
+    <meta name="theme-color" content="#151719" />
+    <title>PCL Compiler | OCaml to LLVM</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="style.css" />
+    <script src="script.js" defer></script>
+  </head>
+
+  <body>
+    <header class="site-header">
+      <nav class="nav-shell" aria-label="Main navigation">
+        <a class="brand" href="#top" aria-label="PCL Compiler home">
+          <span class="brand-mark" aria-hidden="true">P</span>
+          <span>PCL Compiler</span>
+        </a>
+
+        <div class="nav-links">
+          <a href="#demo">Demo</a>
+          <a href="#pipeline">Pipeline</a>
+          <a
+            href="https://github.com/billakos9/pcl-compiler"
+            target="_blank"
+            rel="noreferrer"
+          >GitHub</a>
+        </div>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-code" aria-hidden="true">
+          <span>define i64 @pcl_fact_0(ptr %static_link, i64 %arg0) {</span>
+          <span>%tmp9 = icmp sle i64 %tmp8, 1</span>
+          <span>br i1 %tmp9, label %if_then_1, label %if_else_2</span>
+          <span>%tmp15 = call i64 @pcl_fact_0(ptr %tmp14, i64 %tmp12)</span>
+          <span>%tmp16 = mul i64 %tmp10, %tmp15</span>
+          <span>ret i64 %tmp17</span>
+          <span>}</span>
+        </div>
+
+        <div class="hero-content">
+          <p class="eyebrow">Compiler project / OCaml + LLVM</p>
+          <h1 id="hero-title">PCL Compiler</h1>
+          <p class="hero-lead">From source code to a native executable.</p>
+          <p class="hero-copy">
+            A complete compiler with parsing, semantic analysis, a typed AST,
+            optimizations and LLVM IR generation.
+          </p>
+
+          <div class="hero-actions">
+            <a class="button button-primary" href="#demo">Explore the demo</a>
+            <a
+              class="button button-secondary"
+              href="https://github.com/billakos9/pcl-compiler"
+              target="_blank"
+              rel="noreferrer"
+            >View source</a>
+          </div>
+
+          <ul class="technology-list" aria-label="Technologies used">
+            <li>OCaml</li>
+            <li>Menhir</li>
+            <li>LLVM IR</li>
+            <li>Clang</li>
+          </ul>
+        </div>
+
+        <div class="hero-terminal" aria-label="Example compiler run">
+          <div class="terminal-bar">
+            <span class="terminal-status">Successful build</span>
+            <span>factorial.pcl</span>
+          </div>
+          <div class="terminal-body">
+            <p><span class="prompt">$</span> dune exec ./bin/main.exe -- pcl/programs/factorial.pcl</p>
+            <p class="terminal-muted">created outputs/factorial.imm</p>
+            <p class="terminal-muted">created outputs/factorial.asm</p>
+            <p class="terminal-muted">created outputs/a.out</p>
+            <p><span class="prompt">$</span> ./outputs/a.out</p>
+            <p class="terminal-result">The factorial of 7 is 5040</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="demo" class="section demo-section" aria-labelledby="demo-title">
+        <div class="section-heading">
+          <p class="eyebrow dark">Real compiler output</p>
+          <h2 id="demo-title">Follow one program through the compiler</h2>
+          <p>
+            This is the recursive factorial example from the repository and a
+            small part of the LLVM IR generated from it.
+          </p>
+        </div>
+
+        <div class="code-inspector">
+          <div class="inspector-toolbar">
+            <div class="tab-list" role="tablist" aria-label="Compiler output">
+              <button
+                type="button"
+                role="tab"
+                id="tab-source"
+                aria-controls="panel-source"
+                aria-selected="true"
+                data-panel="source"
+              >PCL source</button>
+              <button
+                type="button"
+                role="tab"
+                id="tab-llvm"
+                aria-controls="panel-llvm"
+                aria-selected="false"
+                data-panel="llvm"
+              >LLVM IR</button>
+              <button
+                type="button"
+                role="tab"
+                id="tab-output"
+                aria-controls="panel-output"
+                aria-selected="false"
+                data-panel="output"
+              >Program output</button>
+            </div>
+
+            <button class="copy-button" type="button" data-copy>Copy</button>
+          </div>
+
+          <div
+            class="code-panel"
+            id="panel-source"
+            role="tabpanel"
+            aria-labelledby="tab-source"
+            data-code-panel="source"
+          >
+            <pre><code>program factorial;
+
+var n : integer;
+
+function fact (x : integer) : integer;
+begin
+    if x &lt;= 1 then
+        result := 1
+    else
+        result := x * fact(x - 1)
+end;
+
+begin
+    n := readInteger();
+    writeString("The factorial of ");
+    writeInteger(n);
+    writeString(" is ");
+    writeInteger(fact(n));
+    writeString("\n")
+end.</code></pre>
+          </div>
+
+          <div
+            class="code-panel"
+            id="panel-llvm"
+            role="tabpanel"
+            aria-labelledby="tab-llvm"
+            data-code-panel="llvm"
+            hidden
+          >
+            <pre><code>define i64 @pcl_fact_0(ptr %static_link, i64 %arg0) {
+entry:
+  %tmp3 = alloca i64
+  store i64 %arg0, ptr %tmp3
+  %tmp8 = load i64, ptr %tmp3
+  %tmp9 = icmp sle i64 %tmp8, 1
+  br i1 %tmp9, label %if_then_1, label %if_else_2
+
+if_else_2:
+  %tmp12 = sub i64 %tmp11, 1
+  %tmp15 = call i64 @pcl_fact_0(ptr %tmp14, i64 %tmp12)
+  %tmp16 = mul i64 %tmp10, %tmp15
+  store i64 %tmp16, ptr %tmp2
+  br label %return_0
+
+return_0:
+  %tmp17 = load i64, ptr %tmp2
+  ret i64 %tmp17
+}</code></pre>
+          </div>
+
+          <div
+            class="code-panel output-panel"
+            id="panel-output"
+            role="tabpanel"
+            aria-labelledby="tab-output"
+            data-code-panel="output"
+            hidden
+          >
+            <pre><code>$ printf "7\n" | ./outputs/a.out
+The factorial of 7 is 5040</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <section id="pipeline" class="section pipeline-section" aria-labelledby="pipeline-title">
+        <div class="section-heading">
+          <p class="eyebrow dark">Pipeline</p>
+          <h2 id="pipeline-title">Nine steps, one executable</h2>
+          <p>
+            Each stage has a small inspector in the repository, so its output
+            can be checked before moving to the next stage.
+          </p>
+        </div>
+
+        <ol class="pipeline-steps">
+          <li><span>01</span><strong>Source</strong></li>
+          <li><span>02</span><strong>Lexer</strong></li>
+          <li><span>03</span><strong>Parser</strong></li>
+          <li><span>04</span><strong>AST</strong></li>
+          <li><span>05</span><strong>Semantics</strong></li>
+          <li><span>06</span><strong>Typed AST</strong></li>
+          <li><span>07</span><strong>Optimizer</strong></li>
+          <li><span>08</span><strong>LLVM IR</strong></li>
+          <li><span>09</span><strong>Executable</strong></li>
+        </ol>
+      </section>
+
+      <section class="section highlights-section" aria-labelledby="highlights-title">
+        <div class="section-heading">
+          <p class="eyebrow dark">Under the hood</p>
+          <h2 id="highlights-title">The parts that required the most work</h2>
+        </div>
+
+        <div class="highlight-list">
+          <article>
+            <p class="highlight-number">01</p>
+            <h3>Semantic analysis</h3>
+            <p>
+              Type checking, lexical scopes, forward declarations, lvalue
+              validation and precise function-call checks.
+            </p>
+          </article>
+
+          <article>
+            <p class="highlight-number">02</p>
+            <h3>Nested functions</h3>
+            <p>
+              Pascal-style lexical scoping, variable capture and static links
+              between nested stack frames.
+            </p>
+          </article>
+
+          <article>
+            <p class="highlight-number">03</p>
+            <h3>LLVM code generation</h3>
+            <p>
+              Typed AST lowering, short-circuit control flow, memory operations
+              and native linking through Clang.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="results-section" aria-labelledby="results-title">
+        <div class="results-shell">
+          <div class="results-intro">
+            <p class="eyebrow">Verified behavior</p>
+            <h2 id="results-title">Tested from source to executable</h2>
+            <p>
+              Every valid program is compiled, linked and executed. Invalid
+              programs must stop before leaving generated artifacts behind.
+            </p>
+          </div>
+
+          <dl class="result-list">
+            <div>
+              <dt>34</dt>
+              <dd>valid programs compiled and executed</dd>
+            </div>
+            <div>
+              <dt>35</dt>
+              <dd>invalid programs correctly rejected</dd>
+            </div>
+            <div>
+              <dt>2</dt>
+              <dd>test modes: normal and optimized</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <section class="project-links" aria-labelledby="links-title">
+        <p class="eyebrow dark">Source code</p>
+        <h2 id="links-title">Read the implementation</h2>
+        <p>
+          The repository contains the compiler, C runtime, phase inspectors,
+          example programs and implementation notes.
+        </p>
+        <div class="project-actions">
+          <a
+            class="button button-dark"
+            href="https://github.com/billakos9/pcl-compiler"
+            target="_blank"
+            rel="noreferrer"
+          >Open GitHub repository</a>
+          <a
+            class="text-link"
+            href="https://github.com/billakos9/pcl-compiler/tree/v1.0.0"
+            target="_blank"
+            rel="noreferrer"
+          >Browse version 1.0.0</a>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <p><strong>PCL Compiler</strong> / OCaml + LLVM</p>
+      <a href="#top">Back to top</a>
+    </footer>
+  </body>
+</html>
