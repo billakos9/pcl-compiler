@@ -1,6 +1,6 @@
 # PCL Compiler
 
-This is my compiler (ID: el22181) for the PCL language, written in OCaml for the Compilers
+This is my compiler for the PCL language, written in OCaml for the Compilers
 course at NTUA.
 
 It reads a PCL program, checks it, creates LLVM IR and assembly, and then links
