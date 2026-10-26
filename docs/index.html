@@ -1,322 +1,113 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta
-      name="description"
-      content="PCL Compiler is an OCaml compiler that performs semantic analysis, generates LLVM IR and builds native executables."
-    />
-    <meta name="theme-color" content="#151719" />
-    <title>PCL Compiler | OCaml to LLVM</title>
-    <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="style.css" />
-    <script src="script.js" defer></script>
-  </head>
-
-  <body>
-    <header class="site-header">
-      <nav class="nav-shell" aria-label="Main navigation">
-        <a class="brand" href="#top" aria-label="PCL Compiler home">
-          <span class="brand-mark" aria-hidden="true">P</span>
-          <span>PCL Compiler</span>
-        </a>
-
-        <div class="nav-links">
-          <a href="#demo">Demo</a>
-          <a href="#pipeline">Pipeline</a>
-          <a
-            href="https://github.com/billakos9/pcl-compiler"
-            target="_blank"
-            rel="noreferrer"
-          >GitHub</a>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A complete PCL compiler, written in OCaml. Explore the path from source code through type checking and LLVM IR to a native executable.">
+  <meta name="theme-color" content="#f8f7f4">
+  <meta property="og:title" content="PCL Compiler — From source. To native.">
+  <meta property="og:description" content="OCaml, Menhir, and LLVM. A small language with a full compilation pipeline.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://billakos9.github.io/pcl-compiler/">
+  <title>PCL Compiler — From source. To native.</title>
+  <link rel="canonical" href="https://billakos9.github.io/pcl-compiler/">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='10' fill='%23252724'/%3E%3Cpath d='m15 15-8 9 8 9m18-18 8 9-8 9' fill='none' stroke='%23f8f7f4' stroke-width='3'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div id="top"></div>
+  <header class="site-header shell">
+    <nav aria-label="Main navigation">
+      <a class="brand" href="#top" aria-label="PCL Compiler home">
+        <svg aria-hidden="true" width="27" height="27" viewBox="0 0 28 28" fill="none"><path d="m9 6-7 8 7 8M19 6l7 8-7 8" stroke="currentColor" stroke-width="1.7"/><path d="m16 4-4 20" stroke="var(--accent)" stroke-width="1.7"/></svg>
+        <span>pcl<span class="brand-secondary"> / compiler</span></span>
+      </a>
+      <div class="nav-links">
+        <a href="#pipeline">The build</a>
+        <a href="https://github.com/billakos9/pcl-compiler" target="_blank" rel="noopener noreferrer">GitHub <span aria-hidden="true">↗</span></a>
+      </div>
+    </nav>
+  </header>
+  <main id="main" class="shell">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="accent-dot" aria-hidden="true"></span> An OCaml + LLVM project</p>
+        <h1 id="hero-title">From source.<br><span>To native.</span></h1>
+        <p class="hero-description">A complete compiler for PCL, written in OCaml. Parsing, type checking, optimization, and native code.</p>
+        <div class="hero-actions">
+          <a class="button" href="https://github.com/billakos9/pcl-compiler" target="_blank" rel="noopener noreferrer">Explore the source <span aria-hidden="true">↗</span></a>
+          <a class="text-link" href="#demo">See an example <span aria-hidden="true">↓</span></a>
         </div>
-      </nav>
-    </header>
-
-    <main id="top">
-      <section class="hero" aria-labelledby="hero-title">
-        <div class="hero-code" aria-hidden="true">
-          <span>define i64 @pcl_fact_0(ptr %static_link, i64 %arg0) {</span>
-          <span>%tmp9 = icmp sle i64 %tmp8, 1</span>
-          <span>br i1 %tmp9, label %if_then_1, label %if_else_2</span>
-          <span>%tmp15 = call i64 @pcl_fact_0(ptr %tmp14, i64 %tmp12)</span>
-          <span>%tmp16 = mul i64 %tmp10, %tmp15</span>
-          <span>ret i64 %tmp17</span>
-          <span>}</span>
+        <p class="hero-note">Built for the Compilers course at NTUA.</p>
+      </div>
+      <div id="demo" class="example" aria-label="Factorial compiler example">
+        <div class="example-header">
+          <span class="file-name"><svg aria-hidden="true" width="13" height="15" viewBox="0 0 13 15" fill="none"><path d="M2 1h6l3 3v10H2V1Z" stroke="currentColor"/><path d="M8 1v4h3" stroke="currentColor"/></svg> factorial.pcl</span>
+          <span class="example-caption">A real example</span>
         </div>
-
-        <div class="hero-content">
-          <p class="eyebrow">Compiler project / OCaml + LLVM</p>
-          <h1 id="hero-title">PCL Compiler</h1>
-          <p class="hero-lead">From source code to a native executable.</p>
-          <p class="hero-copy">
-            A complete compiler with parsing, semantic analysis, a typed AST,
-            optimizations and LLVM IR generation.
-          </p>
-
-          <div class="hero-actions">
-            <a class="button button-primary" href="#demo">Explore the demo</a>
-            <a
-              class="button button-secondary"
-              href="https://github.com/billakos9/pcl-compiler"
-              target="_blank"
-              rel="noreferrer"
-            >View source</a>
+        <div class="example-toolbar">
+          <div class="tabs" role="tablist" aria-label="Compiler output">
+            <button type="button" role="tab" id="tab-source" aria-controls="panel-source" aria-selected="true" data-panel="source">Source</button>
+            <button type="button" role="tab" id="tab-llvm" aria-controls="panel-llvm" aria-selected="false" tabindex="-1" data-panel="llvm">LLVM IR</button>
+            <button type="button" role="tab" id="tab-output" aria-controls="panel-output" aria-selected="false" tabindex="-1" data-panel="output">Output</button>
           </div>
-
-          <ul class="technology-list" aria-label="Technologies used">
-            <li>OCaml</li>
-            <li>Menhir</li>
-            <li>LLVM IR</li>
-            <li>Clang</li>
-          </ul>
+          <button class="copy-button" type="button" data-copy aria-label="Copy source code"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="5.5" y="5.5" width="8" height="8" rx="1" stroke="currentColor"/><path d="M3 10H2.5a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1V3" stroke="currentColor"/></svg><span data-copy-label>Copy</span></button>
         </div>
-
-        <div class="hero-terminal" aria-label="Example compiler run">
-          <div class="terminal-bar">
-            <span class="terminal-status">Successful build</span>
-            <span>factorial.pcl</span>
-          </div>
-          <div class="terminal-body">
-            <p><span class="prompt">$</span> dune exec ./bin/main.exe -- pcl/programs/factorial.pcl</p>
-            <p class="terminal-muted">created outputs/factorial.imm</p>
-            <p class="terminal-muted">created outputs/factorial.asm</p>
-            <p class="terminal-muted">created outputs/a.out</p>
-            <p><span class="prompt">$</span> ./outputs/a.out</p>
-            <p class="terminal-result">The factorial of 7 is 5040</p>
-          </div>
+        <div class="code-panel" id="panel-source" role="tabpanel" aria-labelledby="tab-source" tabindex="0" data-code-panel="source">
+          <pre><code><span class="code-line"><span class="kw">function</span> <span class="fn">fact</span> (x : integer) : integer;</span>
+<span class="code-line"><span class="kw">begin</span></span>
+<span class="code-line">    <span class="kw">if</span> x &lt;= <span class="num">1</span> <span class="kw">then</span></span>
+<span class="code-line">        result := <span class="num">1</span></span>
+<span class="code-line">    <span class="kw">else</span></span>
+<span class="code-line">        result := x * <span class="fn">fact</span>(x - <span class="num">1</span>)</span>
+<span class="code-line"><span class="kw">end</span>;</span></code></pre>
         </div>
-      </section>
-
-      <section id="demo" class="section demo-section" aria-labelledby="demo-title">
-        <div class="section-heading">
-          <p class="eyebrow dark">Real compiler output</p>
-          <h2 id="demo-title">Follow one program through the compiler</h2>
-          <p>
-            This is the recursive factorial example from the repository and a
-            small part of the LLVM IR generated from it.
-          </p>
+        <div class="code-panel" id="panel-llvm" role="tabpanel" aria-labelledby="tab-llvm" tabindex="0" data-code-panel="llvm" hidden>
+          <pre><code><span class="code-line"><span class="comment">; Recursive call — generated IR excerpt</span></span>
+<span class="code-line">%tmp12 = <span class="kw">sub</span> i64 %tmp11, <span class="num">1</span></span>
+<span class="code-line">%tmp15 = <span class="kw">call</span> i64 @pcl_fact_0(</span>
+<span class="code-line">  ptr %tmp14, i64 %tmp12)</span>
+<span class="code-line">%tmp16 = <span class="kw">mul</span> i64 %tmp10, %tmp15</span>
+<span class="code-line"><span class="kw">store</span> i64 %tmp16, ptr %tmp2</span>
+<span class="code-line"><span class="kw">br</span> label %return_0</span></code></pre>
         </div>
-
-        <div class="code-inspector">
-          <div class="inspector-toolbar">
-            <div class="tab-list" role="tablist" aria-label="Compiler output">
-              <button
-                type="button"
-                role="tab"
-                id="tab-source"
-                aria-controls="panel-source"
-                aria-selected="true"
-                data-panel="source"
-              >PCL source</button>
-              <button
-                type="button"
-                role="tab"
-                id="tab-llvm"
-                aria-controls="panel-llvm"
-                aria-selected="false"
-                data-panel="llvm"
-              >LLVM IR</button>
-              <button
-                type="button"
-                role="tab"
-                id="tab-output"
-                aria-controls="panel-output"
-                aria-selected="false"
-                data-panel="output"
-              >Program output</button>
-            </div>
-
-            <button class="copy-button" type="button" data-copy>Copy</button>
-          </div>
-
-          <div
-            class="code-panel"
-            id="panel-source"
-            role="tabpanel"
-            aria-labelledby="tab-source"
-            data-code-panel="source"
-          >
-            <pre><code>program factorial;
-
-var n : integer;
-
-function fact (x : integer) : integer;
-begin
-    if x &lt;= 1 then
-        result := 1
-    else
-        result := x * fact(x - 1)
-end;
-
-begin
-    n := readInteger();
-    writeString("The factorial of ");
-    writeInteger(n);
-    writeString(" is ");
-    writeInteger(fact(n));
-    writeString("\n")
-end.</code></pre>
-          </div>
-
-          <div
-            class="code-panel"
-            id="panel-llvm"
-            role="tabpanel"
-            aria-labelledby="tab-llvm"
-            data-code-panel="llvm"
-            hidden
-          >
-            <pre><code>define i64 @pcl_fact_0(ptr %static_link, i64 %arg0) {
-entry:
-  %tmp3 = alloca i64
-  store i64 %arg0, ptr %tmp3
-  %tmp8 = load i64, ptr %tmp3
-  %tmp9 = icmp sle i64 %tmp8, 1
-  br i1 %tmp9, label %if_then_1, label %if_else_2
-
-if_else_2:
-  %tmp12 = sub i64 %tmp11, 1
-  %tmp15 = call i64 @pcl_fact_0(ptr %tmp14, i64 %tmp12)
-  %tmp16 = mul i64 %tmp10, %tmp15
-  store i64 %tmp16, ptr %tmp2
-  br label %return_0
-
-return_0:
-  %tmp17 = load i64, ptr %tmp2
-  ret i64 %tmp17
-}</code></pre>
-          </div>
-
-          <div
-            class="code-panel output-panel"
-            id="panel-output"
-            role="tabpanel"
-            aria-labelledby="tab-output"
-            data-code-panel="output"
-            hidden
-          >
-            <pre><code>$ printf "7\n" | ./outputs/a.out
-The factorial of 7 is 5040</code></pre>
-          </div>
+        <div class="code-panel output-panel" id="panel-output" role="tabpanel" aria-labelledby="tab-output" tabindex="0" data-code-panel="output" hidden>
+          <pre><code><span class="code-line"><span class="comment">$ printf "7\n" | ./outputs/a.out</span></span>
+<span class="code-line">The factorial of 7 is <span class="fn">5040</span></span></code></pre>
         </div>
-      </section>
-
-      <section id="pipeline" class="section pipeline-section" aria-labelledby="pipeline-title">
-        <div class="section-heading">
-          <p class="eyebrow dark">Pipeline</p>
-          <h2 id="pipeline-title">Nine steps, one executable</h2>
-          <p>
-            Each stage has a small inspector in the repository, so its output
-            can be checked before moving to the next stage.
-          </p>
-        </div>
-
-        <ol class="pipeline-steps">
-          <li><span>01</span><strong>Source</strong></li>
-          <li><span>02</span><strong>Lexer</strong></li>
-          <li><span>03</span><strong>Parser</strong></li>
-          <li><span>04</span><strong>AST</strong></li>
-          <li><span>05</span><strong>Semantics</strong></li>
-          <li><span>06</span><strong>Typed AST</strong></li>
-          <li><span>07</span><strong>Optimizer</strong></li>
-          <li><span>08</span><strong>LLVM IR</strong></li>
-          <li><span>09</span><strong>Executable</strong></li>
-        </ol>
-      </section>
-
-      <section class="section highlights-section" aria-labelledby="highlights-title">
-        <div class="section-heading">
-          <p class="eyebrow dark">Under the hood</p>
-          <h2 id="highlights-title">The parts that required the most work</h2>
-        </div>
-
-        <div class="highlight-list">
-          <article>
-            <p class="highlight-number">01</p>
-            <h3>Semantic analysis</h3>
-            <p>
-              Type checking, lexical scopes, forward declarations, lvalue
-              validation and precise function-call checks.
-            </p>
-          </article>
-
-          <article>
-            <p class="highlight-number">02</p>
-            <h3>Nested functions</h3>
-            <p>
-              Pascal-style lexical scoping, variable capture and static links
-              between nested stack frames.
-            </p>
-          </article>
-
-          <article>
-            <p class="highlight-number">03</p>
-            <h3>LLVM code generation</h3>
-            <p>
-              Typed AST lowering, short-circuit control flow, memory operations
-              and native linking through Clang.
-            </p>
-          </article>
-        </div>
-      </section>
-
-      <section class="results-section" aria-labelledby="results-title">
-        <div class="results-shell">
-          <div class="results-intro">
-            <p class="eyebrow">Verified behavior</p>
-            <h2 id="results-title">Tested from source to executable</h2>
-            <p>
-              Every valid program is compiled, linked and executed. Invalid
-              programs must stop before leaving generated artifacts behind.
-            </p>
-          </div>
-
-          <dl class="result-list">
-            <div>
-              <dt>34</dt>
-              <dd>valid programs compiled and executed</dd>
-            </div>
-            <div>
-              <dt>35</dt>
-              <dd>invalid programs correctly rejected</dd>
-            </div>
-            <div>
-              <dt>2</dt>
-              <dd>test modes: normal and optimized</dd>
-            </div>
-          </dl>
-        </div>
-      </section>
-
-      <section class="project-links" aria-labelledby="links-title">
-        <p class="eyebrow dark">Source code</p>
-        <h2 id="links-title">Read the implementation</h2>
-        <p>
-          The repository contains the compiler, C runtime, phase inspectors,
-          example programs and implementation notes.
-        </p>
-        <div class="project-actions">
-          <a
-            class="button button-dark"
-            href="https://github.com/billakos9/pcl-compiler"
-            target="_blank"
-            rel="noreferrer"
-          >Open GitHub repository</a>
-          <a
-            class="text-link"
-            href="https://github.com/billakos9/pcl-compiler/tree/v1.0.0"
-            target="_blank"
-            rel="noreferrer"
-          >Browse version 1.0.0</a>
-        </div>
-      </section>
-    </main>
-
-    <footer>
-      <p><strong>PCL Compiler</strong> / OCaml + LLVM</p>
-      <a href="#top">Back to top</a>
-    </footer>
-  </body>
+        <div class="example-result"><span><span aria-hidden="true">↳</span> Native executable</span><span class="result-value">7! = 5040 <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="m3 7 2.5 2.5L11 4" stroke="currentColor" stroke-width="1.5"/></svg></span></div>
+        <a class="example-source" href="https://github.com/billakos9/pcl-compiler/blob/main/pcl/programs/factorial.pcl" target="_blank" rel="noopener noreferrer">Excerpts &amp; recorded output <span>Full example ↗</span></a>
+        <span class="sr-only" role="status" aria-live="polite" data-copy-status></span>
+      </div>
+    </section>
+    <div class="stack" aria-label="Technologies used">
+      <span class="eyebrow">The toolkit</span>
+      <ul><li>OCaml</li><li>ocamllex</li><li>Menhir</li><li>LLVM</li><li>Clang</li><li>Dune</li></ul>
+    </div>
+    <section id="pipeline" class="implementation" aria-labelledby="pipeline-title">
+      <div class="section-heading"><p class="eyebrow">Under the hood</p><h2 id="pipeline-title">A small language.<br class="mobile-break"> A full pipeline.</h2><a class="text-link" href="https://github.com/billakos9/pcl-compiler/tree/main/lib" target="_blank" rel="noopener noreferrer">Read the implementation <span aria-hidden="true">↗</span></a></div>
+      <ol class="pipeline">
+        <li><span class="stage-number">01</span><h3>Parse</h3><p>Source → AST</p></li>
+        <li><span class="stage-number">02</span><h3>Check</h3><p>Types &amp; scopes</p></li>
+        <li><span class="stage-number">03</span><h3>Optimize</h3><p>Optional constant folding</p></li>
+        <li><span class="stage-number">04</span><h3>Lower</h3><p>Typed AST → LLVM IR</p></li>
+        <li><span class="stage-number">05</span><h3>Link</h3><p>C runtime → executable</p></li>
+      </ol>
+      <div class="details">
+        <article><h3>Scope-aware semantics</h3><p>Type checks, forward declarations, and precise function-call validation.</p></article>
+        <article><h3>Nested functions</h3><p>Lexical scopes, variable capture, and static links between stack frames.</p></article>
+        <article><h3>Native code generation</h3><p>LLVM IR, short-circuit control flow, and linking through Clang.</p></article>
+      </div>
+    </section>
+    <section class="test-corpus" aria-labelledby="tests-title">
+      <div><p class="eyebrow" id="tests-title">The test corpus</p><p>From valid programs to deliberate errors.</p></div>
+      <a href="https://github.com/billakos9/pcl-compiler/tree/main/pcl/programs" target="_blank" rel="noopener noreferrer"><strong>34</strong><span>valid programs <span aria-hidden="true">↗</span></span></a>
+      <a href="https://github.com/billakos9/pcl-compiler/tree/main/pcl/programs-erroneous" target="_blank" rel="noopener noreferrer"><strong>35</strong><span>invalid programs <span aria-hidden="true">↗</span></span></a>
+      <a class="optimization" href="https://github.com/billakos9/pcl-compiler#optimizations" target="_blank" rel="noopener noreferrer"><strong>-O</strong><span>optional optimization <span aria-hidden="true">↗</span></span></a>
+    </section>
+  </main>
+  <footer class="shell"><p>A compiler project by <a href="https://github.com/billakos9" target="_blank" rel="noopener noreferrer">Vasilis Afentoulidis</a><span class="footer-divider">/</span>NTUA</p><a href="https://github.com/billakos9/pcl-compiler#installation-on-debianubuntu" target="_blank" rel="noopener noreferrer">Build it yourself <span aria-hidden="true">↗</span></a></footer>
+</body>
 </html>
